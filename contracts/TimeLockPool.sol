@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./base/BasePool.sol";
+import "./interfaces/ITimeLockPool.sol";
 
-contract TimeLockPool is BasePool {
+contract TimeLockPool is BasePool, ITimeLockPool {
     // TODO implement reward tracking
 
     using Math for uint256;
@@ -28,14 +29,17 @@ contract TimeLockPool is BasePool {
         string memory _symbol,
         address _depositToken,
         address _rewardToken,
+        address _escrowPool,
+        uint256 _escrowPortion,
+        uint256 _escrowDuration,
         uint256 _maxBonus,
         uint256 _maxLockDuration
-    ) BasePool(_name, _symbol, _depositToken, _rewardToken) {
+    ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
     }
 
-    function deposit(uint256 _amount, uint256 _duration, address _receiver) external {
+    function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
@@ -61,12 +65,6 @@ contract TimeLockPool is BasePool {
         
         // return tokens
         depositToken.safeTransfer(_receiver, tokenAmount);
-    }
-
-
-    function claimRewards(address _receiver) external {
-        // TODO implement
-        // Consider making abstract so we can have escrowed and non escrowed variants
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
