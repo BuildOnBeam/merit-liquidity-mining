@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./BasePool.sol";
+import "./base/BasePool.sol";
 
 contract TimeLockPool is BasePool {
     // TODO implement reward tracking
@@ -27,9 +27,10 @@ contract TimeLockPool is BasePool {
         string memory _name,
         string memory _symbol,
         address _depositToken,
+        address _rewardToken,
         uint256 _maxBonus,
         uint256 _maxLockDuration
-    ) BasePool(_name, _symbol, _depositToken) {
+    ) BasePool(_name, _symbol, _depositToken, _rewardToken) {
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
     }
@@ -65,7 +66,7 @@ contract TimeLockPool is BasePool {
 
     function claimRewards(address _receiver) external {
         // TODO implement
-        // Consider making abstract so we can have escrowd and non escrowed variants
+        // Consider making abstract so we can have escrowed and non escrowed variants
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
