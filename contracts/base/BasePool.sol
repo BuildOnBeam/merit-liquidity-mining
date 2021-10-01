@@ -35,6 +35,10 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         escrowPool = ITimeLockPool(_escrowPool);
         escrowPortion = _escrowPortion;
         escrowDuration = _escrowDuration;
+
+        if(_rewardToken != address(0)) {
+            IERC20(_rewardToken).approve(_escrowPool, type(uint256).max);
+        }
     }
 
     function _mint(address _account, uint256 _amount) internal virtual override {

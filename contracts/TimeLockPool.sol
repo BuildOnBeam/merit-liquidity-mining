@@ -70,4 +70,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
         return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
     }
+
+    function getTotalDeposit(address _account) public view returns(uint256) {
+        uint256 total;
+        for(uint256 i = 0; i < depositsOf[_account].length; i++) {
+            total += depositsOf[_account][i].amount;
+        }
+
+        return total;
+    }
 }

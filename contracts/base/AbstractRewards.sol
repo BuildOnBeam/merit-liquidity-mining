@@ -20,7 +20,7 @@ abstract contract AbstractRewards is IAbstractRewards {
   using SafeCast for int256;
 
 /* ========  Constants  ======== */
-  uint128 internal constant POINTS_MULTIPLIER = type(uint128).max;
+  uint128 public constant POINTS_MULTIPLIER = type(uint128).max;
 
 /* ========  Internal Function References  ======== */
   function(address) view returns (uint256) private immutable getSharesOf;
@@ -28,8 +28,8 @@ abstract contract AbstractRewards is IAbstractRewards {
 
 /* ========  Storage  ======== */
   uint256 public pointsPerShare;
-  mapping(address => int256) internal pointsCorrection;
-  mapping(address => uint256) private withdrawnRewards;
+  mapping(address => int256) public pointsCorrection;
+  mapping(address => uint256) public withdrawnRewards;
 
   constructor(
     function(address) view returns (uint256) getSharesOf_,
@@ -83,7 +83,7 @@ abstract contract AbstractRewards is IAbstractRewards {
    */
   function _distributeRewards(uint256 _amount) internal {
     uint256 shares = getTotalShares();
-    require(shares > 0, "SHARES");
+    require(shares > 0, "AbstractRewards._distributeRewards: total share suppy is zero");
 
     if (_amount > 0) {
       pointsPerShare = pointsPerShare + (_amount * POINTS_MULTIPLIER / shares);
