@@ -21,7 +21,7 @@ const ESCROW_DURATION = 60 * 60 * 24 * 365; // 1 year
 
 const INITIAL_MINT = parseEther("1000000000");
 
-describe.only("BasePool", function () {
+describe("BasePool", function () {
     this.timeout(300000000);
 
     let deployer: SignerWithAddress;
