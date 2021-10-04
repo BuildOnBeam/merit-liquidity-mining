@@ -46,7 +46,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         depositsOf[_receiver].push(Deposit({
             amount: _amount,
-            start: uint64(duration),
+            start: uint64(block.timestamp),
             end: uint64(block.timestamp) + uint64(duration)
         }));
 
@@ -57,14 +57,19 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     function withdraw(uint256 _depositId, address _receiver) external {
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
-        uint256 tokenAmount = userDeposit.amount * 1e18 / getMultiplier(userDeposit.end - userDeposit.start);
+        require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
+
+        uint256 shareAmount = userDeposit.amount * getMultiplier(uint256(userDeposit.end - userDeposit.start)) / 1e18;
 
         // remove Deposit
         depositsOf[_msgSender()][_depositId] = depositsOf[_msgSender()][depositsOf[_msgSender()].length - 1];
         depositsOf[_msgSender()].pop();
+
+        // burn pool shares
+        _burn(_msgSender(), shareAmount);
         
         // return tokens
-        depositToken.safeTransfer(_receiver, tokenAmount);
+        depositToken.safeTransfer(_receiver, userDeposit.amount);
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
@@ -78,5 +83,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         }
 
         return total;
+    }
+
+    function getDepositsOf(address _account) public view returns(Deposit[] memory) {
+        return depositsOf[_account];
+    }
+
+    function getDepositsOfLength(address _account) public view returns(uint256) {
+        return depositsOf[_account].length;
     }
 }
