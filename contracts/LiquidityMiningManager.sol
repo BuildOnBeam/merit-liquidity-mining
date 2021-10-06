@@ -7,6 +7,8 @@ import "./base/TokenSaver.sol";
 
 contract LiquidityMiningManager is TokenSaver {
 
+    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
+
     IERC20 immutable public reward;
     address immutable public rewardSource;
     uint256 public rewardPerSecond; //total reward amount per second
@@ -22,7 +24,7 @@ contract LiquidityMiningManager is TokenSaver {
     }
 
     modifier onlyGov {
-        // TODO check gov role
+        require(hasRole(GOV_ROLE, _msgSender()), "LiquidityMiningManager.onlyGov: permission denied");
         _;
     }
 
@@ -51,14 +53,14 @@ contract LiquidityMiningManager is TokenSaver {
     function removePool(uint256 _poolId) external onlyGov {
         distributeRewards();
         address poolAddress = address(pools[_poolId].poolContract);
-        require(poolAdded[poolAddress], "LiquidityMiningManager.removePool: Pool not known");
+
+        // decrease totalWeight
+        totalWeight -= pools[_poolId].weight;
         
         // remove pool
         pools[_poolId] = pools[pools.length - 1];
         pools.pop();
         poolAdded[poolAddress] = false;
-
-        // decrease totalWeight
     }
 
     function adjustWeight(uint256 _poolId, uint256 _newWeight) external onlyGov {
@@ -76,14 +78,20 @@ contract LiquidityMiningManager is TokenSaver {
         rewardPerSecond = _rewardPerSecond;
     }
 
-    function getPools() external view returns(Pool[] memory result) {
-        return pools;
-    }
-
     function distributeRewards() public {
         uint256 timePassed = block.timestamp - lastDistribution;
         uint256 totalRewardAmount = rewardPerSecond * timePassed;
         lastDistribution = block.timestamp;
+
+        // return if pool length == 0
+        if(pools.length == 0) {
+            return;
+        }
+
+        // return if accrued rewards == 0
+        if(totalRewardAmount == 0) {
+            return;
+        }
 
         reward.transferFrom(rewardSource, address(this), totalRewardAmount);
 
@@ -93,6 +101,16 @@ contract LiquidityMiningManager is TokenSaver {
             // ignore tx failing
             address(pool.poolContract).call(abi.encodeWithSelector(pool.poolContract.distributeRewards.selector, poolRewardAmount));
         }
+
+        uint256 leftOverReward = reward.balanceOf(address(this));
+
+        // send back excess but ignore dust
+        if(leftOverReward > 1) {
+            reward.transfer(rewardSource, leftOverReward);
+        }
     }
 
+    function getPools() external view returns(Pool[] memory result) {
+        return pools;
+    }
 }

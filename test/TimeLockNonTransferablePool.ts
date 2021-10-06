@@ -1,7 +1,6 @@
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants } from "ethers";
 import hre from "hardhat";
 import { TestToken__factory, TimeLockNonTransferablePool__factory } from "../typechain";
@@ -16,7 +15,7 @@ const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
 const INITIAL_MINT = parseEther("1000000");
 const DEPOSIT_AMOUNT = parseEther("1000");
 
-describe("TimeLockPool", function () {
+describe("TimeLockNonTransferablePool", function () {
 
     let deployer: SignerWithAddress;
     let account1: SignerWithAddress;
