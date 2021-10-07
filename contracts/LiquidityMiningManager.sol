@@ -28,6 +28,12 @@ contract LiquidityMiningManager is TokenSaver {
         _;
     }
 
+    event PoolAdded(address indexed pool, uint256 weight);
+    event PoolRemoved(uint256 indexed poolId, address indexed pool);
+    event WeightAdjusted(uint256 indexed poolId, address indexed pool, uint256 newWeight);
+    event RewardsPerSecondSet(uint256 rewardsPerSecond);
+    event RewardsDistributed(address _from, uint256 indexed _amount);
+
     constructor(address _reward, address _rewardSource) {
         reward = IERC20(_reward);
         rewardSource = _rewardSource;
@@ -48,6 +54,8 @@ contract LiquidityMiningManager is TokenSaver {
 
         // Approve max token amount
         reward.approve(_poolContract, type(uint256).max);
+
+        emit PoolAdded(_poolContract, _weight);
     }
 
     function removePool(uint256 _poolId) external onlyGov {
@@ -61,6 +69,8 @@ contract LiquidityMiningManager is TokenSaver {
         pools[_poolId] = pools[pools.length - 1];
         pools.pop();
         poolAdded[poolAddress] = false;
+
+        emit PoolRemoved(_poolId, poolAddress);
     }
 
     function adjustWeight(uint256 _poolId, uint256 _newWeight) external onlyGov {
@@ -71,11 +81,15 @@ contract LiquidityMiningManager is TokenSaver {
         totalWeight += _newWeight;
 
         pool.weight = _newWeight;
+
+        emit WeightAdjusted(_poolId, address(pool.poolContract), _newWeight);
     }
 
     function setRewardPerSecond(uint256 _rewardPerSecond) external onlyGov {
         distributeRewards();
         rewardPerSecond = _rewardPerSecond;
+
+        emit RewardsPerSecondSet(_rewardPerSecond);
     }
 
     function distributeRewards() public {
@@ -108,6 +122,8 @@ contract LiquidityMiningManager is TokenSaver {
         if(leftOverReward > 1) {
             reward.transfer(rewardSource, leftOverReward);
         }
+
+        emit RewardsDistributed(_msgSender(), totalRewardAmount);
     }
 
     function getPools() external view returns(Pool[] memory result) {

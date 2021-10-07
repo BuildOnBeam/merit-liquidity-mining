@@ -39,6 +39,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         maxLockDuration = _maxLockDuration;
     }
 
+    event Deposited(uint256 amount, uint256 duration, address indexed receiver, address indexed from);
+    event Withdrawn(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
+
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
@@ -53,6 +56,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 mintAmount = _amount * getMultiplier(duration) / 1e18;
 
         _mint(_receiver, mintAmount);
+        emit Deposited(_amount, duration, _receiver, _msgSender());
     }
 
     function withdraw(uint256 _depositId, address _receiver) external {
@@ -70,6 +74,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         
         // return tokens
         depositToken.safeTransfer(_receiver, userDeposit.amount);
+        emit Withdrawn(_depositId, _receiver, _msgSender(), userDeposit.amount);
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {

@@ -8,8 +8,9 @@ contract TokenSaver is AccessControlEnumerable {
 
     bytes32 public constant TOKEN_SAVER_ROLE = keccak256("TOKEN_SAVER_ROLE");
 
+    event TokenSaved(address indexed by, address indexed receiver, address indexed token, uint256 amount);
+
     modifier onlyTokenSaver() {
-        // TODO implement tokenSaver role
         require(hasRole(TOKEN_SAVER_ROLE, _msgSender()), "TokenSaver.onlyTokenSaver: permission denied");
         _;
     }
@@ -20,6 +21,7 @@ contract TokenSaver is AccessControlEnumerable {
 
     function saveToken(address _token, address _receiver, uint256 _amount) external onlyTokenSaver {
         IERC20(_token).transfer(_receiver, _amount);
+        emit TokenSaved(_msgSender(), _receiver, _token, _amount);
     }
 
 }
