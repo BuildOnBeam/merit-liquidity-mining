@@ -1,11 +1,15 @@
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
-import "./tasks/accounts";
-import "./tasks/clean";
-import "./tasks/deploy";
+if(!process.env.COMPILE_ONLY) {
+  require("./tasks/accounts");
+  require("./tasks/clean");
+  require("./tasks/deploy");
+}
 
 import { resolve } from "path";
 
@@ -94,6 +98,9 @@ const config: HardhatUserConfig = {
     outDir: "typechain",
     target: "ethers-v5",
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_KEY
+  }
 };
 
 export default config;

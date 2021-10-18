@@ -5,7 +5,9 @@ import "../interfaces/IAbstractRewards.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
- * @dev Many functions in this contract were taken from this repository:
+ * @dev Based on: https://github.com/indexed-finance/dividends/blob/master/contracts/base/AbstractDividends.sol
+ * Renamed dividends to rewards.
+ * @dev (OLD) Many functions in this contract were taken from this repository:
  * https://github.com/atpar/funds-distribution-token/blob/master/contracts/FundsDistributionToken.sol
  * which is an example implementation of ERC 2222, the draft for which can be found at
  * https://github.com/atpar/funds-distribution-token/blob/master/EIP-DRAFT.md

@@ -9,8 +9,6 @@ import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
 contract TimeLockPool is BasePool, ITimeLockPool {
-    // TODO implement reward tracking
-
     using Math for uint256;
     using SafeERC20 for IERC20;
 
