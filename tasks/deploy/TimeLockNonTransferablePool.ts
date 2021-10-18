@@ -5,18 +5,6 @@ import sleep from "../../utils/sleep";
 
 const VERIFY_DELAY = 100000;
 
-// constructor(
-//     string memory _name,
-//     string memory _symbol,
-//     address _depositToken,
-//     address _rewardToken,
-//     address _escrowPool,
-//     uint256 _escrowPortion,
-//     uint256 _escrowDuration,
-//     uint256 _maxBonus,
-//     uint256 _maxLockDuration
-// ) TimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration)
-
 task("deploy-time-lock-non-transferable-pool")
     .addParam("name", "Name of the staking pool")
     .addParam("symbol", "Symbol of the staking pool")
@@ -28,8 +16,9 @@ task("deploy-time-lock-non-transferable-pool")
     .addParam("maxBonus", "Maximum bonus for locking longer, 1 == 100% bonus")
     .addParam("maxLockDuration", "After how long the bonus is maxed out, in seconds")
     .setAction(async(taskArgs, { ethers, run }) => {
-        const signers = ethers.getSigners();
+        const signers = await ethers.getSigners();
 
+        console.log("Deploying TimeLockNonTransferablePool");
         const timeLockNonTransferablePool = await (new TimeLockNonTransferablePool__factory(signers[0]).deploy(
             taskArgs.name,
             taskArgs.symbol,
@@ -41,5 +30,25 @@ task("deploy-time-lock-non-transferable-pool")
             parseEther(taskArgs.maxBonus),
             taskArgs.maxLockDuration
         ));
+        console.log(`TimeLockNonTransferablePool deployed at: ${timeLockNonTransferablePool.address}`);
 
+        if(taskArgs.verify) {
+            console.log("Verifying TimeLockNonTransferablePool, can take some time")
+            await sleep(VERIFY_DELAY);
+            await run("verify:verify", {
+                address: timeLockNonTransferablePool.address,
+                constructorArguments: [
+                    taskArgs.name,
+                    taskArgs.symbol,
+                    taskArgs.depositToken,
+                    taskArgs.rewardToken,
+                    taskArgs.rewardPool,
+                    parseEther(taskArgs.escrowPortion),
+                    taskArgs.escrowDuration,
+                    parseEther(taskArgs.maxBonus),
+                    taskArgs.maxLockDuration
+                ]
+            });
+        }
+        console.log("done");
 });
