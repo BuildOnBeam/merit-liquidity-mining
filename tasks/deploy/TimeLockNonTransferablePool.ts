@@ -15,6 +15,7 @@ task("deploy-time-lock-non-transferable-pool")
     .addParam("escrowDuration", "How long tokens will be escrowed")
     .addParam("maxBonus", "Maximum bonus for locking longer, 1 == 100% bonus")
     .addParam("maxLockDuration", "After how long the bonus is maxed out, in seconds")
+    .addFlag("verify")
     .setAction(async(taskArgs, { ethers, run }) => {
         const signers = await ethers.getSigners();
 
@@ -24,7 +25,7 @@ task("deploy-time-lock-non-transferable-pool")
             taskArgs.symbol,
             taskArgs.depositToken,
             taskArgs.rewardToken,
-            taskArgs.rewardPool,
+            taskArgs.escrowPool,
             parseEther(taskArgs.escrowPortion),
             taskArgs.escrowDuration,
             parseEther(taskArgs.maxBonus),
@@ -42,7 +43,7 @@ task("deploy-time-lock-non-transferable-pool")
                     taskArgs.symbol,
                     taskArgs.depositToken,
                     taskArgs.rewardToken,
-                    taskArgs.rewardPool,
+                    taskArgs.escrowPool,
                     parseEther(taskArgs.escrowPortion),
                     taskArgs.escrowDuration,
                     parseEther(taskArgs.maxBonus),
