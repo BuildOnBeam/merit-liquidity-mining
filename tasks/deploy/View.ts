@@ -21,7 +21,8 @@ task("deploy-view")
             await run("verify:verify", {
                 address: view.address,
                 constructorArguments: [
-                    taskArgs.liquidityMiningManager
+                    taskArgs.liquidityMiningManager,
+                    taskArgs.escrowPool
                 ]
             });
         }
