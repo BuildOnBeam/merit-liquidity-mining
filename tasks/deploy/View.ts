@@ -12,7 +12,7 @@ task("deploy-view")
         const signers = await ethers.getSigners();
 
         console.log("Deploying View");
-        const view = await (new View__factory(signers[0])).deploy(taskArgs.liquidityMiningManager);
+        const view = await (new View__factory(signers[0])).deploy(taskArgs.liquidityMiningManager, taskArgs.escrowPool);
         console.log(`View deployed at: ${view.address}`);
 
         if(taskArgs.verify) {
