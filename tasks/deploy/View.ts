@@ -6,6 +6,7 @@ const VERIFY_DELAY = 100000;
 
 task("deploy-view")
     .addParam("liquidityMiningManager", "Address of the liquidity mining manager contract")
+    .addParam("escrowPool", "Address of the escrow pool")
     .addFlag("verify")
     .setAction(async(taskArgs, { ethers, run }) => {
         const signers = await ethers.getSigners();
