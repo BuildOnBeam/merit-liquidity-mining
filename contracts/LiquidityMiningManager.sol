@@ -8,6 +8,7 @@ import "./base/TokenSaver.sol";
 contract LiquidityMiningManager is TokenSaver {
 
     bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
+    bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
 
     IERC20 immutable public reward;
     address immutable public rewardSource;
@@ -25,6 +26,11 @@ contract LiquidityMiningManager is TokenSaver {
 
     modifier onlyGov {
         require(hasRole(GOV_ROLE, _msgSender()), "LiquidityMiningManager.onlyGov: permission denied");
+        _;
+    }
+
+    modifier onlyRewardDistributor {
+        require(hasRole(REWARD_DISTRIBUTOR_ROLE, _msgSender()), "LiquidityMiningManager.onlyRewardDistributor: permission denied");
         _;
     }
 
@@ -92,7 +98,7 @@ contract LiquidityMiningManager is TokenSaver {
         emit RewardsPerSecondSet(_rewardPerSecond);
     }
 
-    function distributeRewards() public {
+    function distributeRewards() public onlyRewardDistributor {
         uint256 timePassed = block.timestamp - lastDistribution;
         uint256 totalRewardAmount = rewardPerSecond * timePassed;
         lastDistribution = block.timestamp;

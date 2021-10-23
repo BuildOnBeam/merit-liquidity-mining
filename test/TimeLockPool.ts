@@ -96,6 +96,14 @@ describe("TimeLockPool", function () {
 
         const DEPOSIT_AMOUNT = parseEther("10");
 
+        it("Depositing with no lock should lock it for 10 minutes to prevent flashloans", async() => {
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const deposit = await timeLockPool.depositsOf(account3.address, 0);
+            const duration = await deposit.end.sub(deposit.start);
+            expect(duration).to.eq(MIN_LOCK_DURATION);
+        });
+
         it("Deposit with no lock", async() => {
             const depositTokenBalanceBefore = await depositToken.balanceOf(account1.address);
             await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
@@ -106,14 +114,16 @@ describe("TimeLockPool", function () {
             const blockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
             const totalDeposit = await timeLockPool.getTotalDeposit(account3.address);
             const timeLockPoolBalance = await timeLockPool.balanceOf(account3.address)
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+
+            const multiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
 
             expect(deposit.amount).to.eq(DEPOSIT_AMOUNT);
             expect(deposit.start).to.eq(blockTimestamp);
-            expect(deposit.end).to.eq(blockTimestamp);
+            expect(deposit.end).to.eq(BigNumber.from(blockTimestamp).add(MIN_LOCK_DURATION));
             expect(depositCount).to.eq(1);
             expect(totalDeposit).to.eq(DEPOSIT_AMOUNT);
-            expect(timeLockPoolBalance).to.eq(DEPOSIT_AMOUNT);
-
+            expect(timeLockPoolBalance).to.eq(DEPOSIT_AMOUNT.mul(multiplier).div(constants.WeiPerEther));
             expect(depositTokenBalanceAfter).to.eq(depositTokenBalanceBefore.sub(DEPOSIT_AMOUNT));
         });
         it("Trying to lock for longer than max duration should lock for max duration", async() => {
