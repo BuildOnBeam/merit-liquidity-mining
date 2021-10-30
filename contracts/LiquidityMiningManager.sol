@@ -2,10 +2,12 @@
 pragma solidity >=0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IBasePool.sol";
 import "./base/TokenSaver.sol";
 
 contract LiquidityMiningManager is TokenSaver {
+    using SafeERC20 for IERC20;
 
     bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
@@ -59,7 +61,7 @@ contract LiquidityMiningManager is TokenSaver {
         totalWeight += _weight;
 
         // Approve max token amount
-        reward.approve(_poolContract, type(uint256).max);
+        reward.safeApprove(_poolContract, type(uint256).max);
 
         emit PoolAdded(_poolContract, _weight);
     }
@@ -114,7 +116,7 @@ contract LiquidityMiningManager is TokenSaver {
             return;
         }
 
-        reward.transferFrom(rewardSource, address(this), totalRewardAmount);
+        reward.safeTransferFrom(rewardSource, address(this), totalRewardAmount);
 
         for(uint256 i = 0; i < pools.length; i ++) {
             Pool memory pool = pools[i];
@@ -127,7 +129,7 @@ contract LiquidityMiningManager is TokenSaver {
 
         // send back excess but ignore dust
         if(leftOverReward > 1) {
-            reward.transfer(rewardSource, leftOverReward);
+            reward.safeTransfer(rewardSource, leftOverReward);
         }
 
         emit RewardsDistributed(_msgSender(), totalRewardAmount);

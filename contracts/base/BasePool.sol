@@ -42,7 +42,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         escrowDuration = _escrowDuration;
 
         if(_rewardToken != address(0) && _escrowPool != address(0)) {
-            IERC20(_rewardToken).approve(_escrowPool, type(uint256).max);
+            IERC20(_rewardToken).safeApprove(_escrowPool, type(uint256).max);
         }
     }
 
@@ -77,7 +77,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
 
         // ignore dust
         if(nonEscrowedRewardAmount > 1) {
-            rewardToken.transfer(_receiver, nonEscrowedRewardAmount);
+            rewardToken.safeTransfer(_receiver, nonEscrowedRewardAmount);
         }
 
         emit RewardsClaimed(_msgSender(), _receiver, escrowedRewardAmount, nonEscrowedRewardAmount);
