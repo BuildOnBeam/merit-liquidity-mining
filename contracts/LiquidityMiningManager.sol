@@ -11,6 +11,7 @@ contract LiquidityMiningManager is TokenSaver {
 
     bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
+    uint256 public MAX_POOL_COUNT = 10;
 
     IERC20 immutable public reward;
     address immutable public rewardSource;
@@ -53,6 +54,7 @@ contract LiquidityMiningManager is TokenSaver {
         distributeRewards();
         require(_poolContract != address(0), "LiquidityMiningManager.addPool: pool contract must be set");
         require(!poolAdded[_poolContract], "LiquidityMiningManager.addPool: Pool already added");
+        require(pools.length < MAX_POOL_COUNT, "LiquidityMiningManager.addPool: Max amount of pools reached")
         // add pool
         pools.push(Pool({
             poolContract: IBasePool(_poolContract),
