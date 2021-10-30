@@ -14,7 +14,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     uint256 public immutable maxBonus;
     uint256 public immutable maxLockDuration;
-    uint256 public immutable MIN_LOCK_DURATION = 10 minutes;
+    uint256 public constant MIN_LOCK_DURATION = 10 minutes;
     
     mapping(address => Deposit[]) public depositsOf;
 
