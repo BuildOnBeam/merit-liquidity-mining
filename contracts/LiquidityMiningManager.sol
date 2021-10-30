@@ -59,6 +59,7 @@ contract LiquidityMiningManager is TokenSaver {
     }
 
     function removePool(uint256 _poolId) external onlyGov {
+        require(_poolId < pools.length, "LiquidityMiningManager.removePool: Pool does not exist");
         distributeRewards();
         address poolAddress = address(pools[_poolId].poolContract);
 
