@@ -66,6 +66,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
         require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
 
+        //                      No risk of wrapping around on casting to uint256 since deposit end always > deposit start and types are 64 bits
         uint256 shareAmount = userDeposit.amount * getMultiplier(uint256(userDeposit.end - userDeposit.start)) / 1e18;
 
         // remove Deposit
