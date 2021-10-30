@@ -14,6 +14,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     uint256 public immutable maxBonus;
     uint256 public immutable maxLockDuration;
+    uint256 public immutable MIN_LOCK_DURATION = 10 minutes;
     
     mapping(address => Deposit[]) public depositsOf;
 
@@ -43,6 +44,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
+        // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
+        duration = duration.max(MIN_LOCK_DURATION);
+
         depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
 
         depositsOf[_receiver].push(Deposit({

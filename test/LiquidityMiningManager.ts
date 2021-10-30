@@ -87,6 +87,9 @@ describe("LiquidityMiningManager", function () {
         // assign gov role to account1
         const GOV_ROLE = await liquidityMiningManager.GOV_ROLE();
         await liquidityMiningManager.grantRole(GOV_ROLE, account1.address);
+        // assign REWARD_DISTRIBUTOR_ROLE
+        const REWARD_DISTRIBUTOR_ROLE = await liquidityMiningManager.REWARD_DISTRIBUTOR_ROLE();
+        await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, account1.address);
 
         // connect account1 to relevant contracts
         liquidityMiningManager = liquidityMiningManager.connect(account1);
@@ -237,7 +240,11 @@ describe("LiquidityMiningManager", function () {
                 await liquidityMiningManager.addPool(pool.address, parseEther((i + 1).toString()));
                 i ++;
             } 
-        })
+        });
+
+        it("Distributing rewards from an address which does not have the REWARD_DISTRIBUTOR_ROLE", async() => {
+            await expect(liquidityMiningManager.connect(account2.address).distributeRewards()).to.revertedWith("LiquidityMiningManager.onlyRewardDistributor: permission denied");
+        });
 
         it("Distributing zero rewards", async() => {
             await liquidityMiningManager.distributeRewards();
