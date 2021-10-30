@@ -43,12 +43,15 @@ contract LiquidityMiningManager is TokenSaver {
     event RewardsDistributed(address _from, uint256 indexed _amount);
 
     constructor(address _reward, address _rewardSource) {
+        require(_reward != address(0), "LiquidityMiningManager.constructor: reward token must be set");
+        require(_rewardSource != address(0), "LiquidityMiningManager.constructor: rewardSource token must be set");
         reward = IERC20(_reward);
         rewardSource = _rewardSource;
     }
 
     function addPool(address _poolContract, uint256 _weight) external onlyGov {
         distributeRewards();
+        require(_poolContract != address(0), "LiquidityMiningManager.addPool: pool contract must be set");
         require(!poolAdded[_poolContract], "LiquidityMiningManager.addPool: Pool already added");
         // add pool
         pools.push(Pool({
@@ -83,6 +86,7 @@ contract LiquidityMiningManager is TokenSaver {
     }
 
     function adjustWeight(uint256 _poolId, uint256 _newWeight) external onlyGov {
+        require(_poolId < pools.length, "LiquidityMiningManager.adjustWeight: Pool does not exist");
         distributeRewards();
         Pool storage pool = pools[_poolId];
 

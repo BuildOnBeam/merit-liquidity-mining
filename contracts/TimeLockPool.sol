@@ -34,6 +34,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
+        require(maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
     }
@@ -42,6 +43,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     event Withdrawn(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
 
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
+        require(_amount > 0, "TimeLockPool.deposit: cannot deposit 0");
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
