@@ -62,7 +62,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     }
 
     function withdraw(uint256 _depositId, address _receiver) external {
-        require(_depositId < depositsOf[_msgSender()], "TimeLockPool.withdraw: Deposit does not exist");
+        require(_depositId < depositsOf[_msgSender()].length, "TimeLockPool.withdraw: Deposit does not exist");
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
         require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
 
