@@ -77,7 +77,7 @@ contract View {
                     amount: deposit.amount,
                     start: deposit.start,
                     end: deposit.end,
-                    multiplier: poolContract.getMultiplier(deposit.end - deposit.end)
+                    multiplier: poolContract.getMultiplier(deposit.end - deposit.start)
                 });
             }
 
@@ -104,7 +104,7 @@ contract View {
                 amount: deposit.amount,
                 start: deposit.start,
                 end: deposit.end,
-                multiplier: escrowPool.getMultiplier(deposit.end - deposit.end)
+                multiplier: escrowPool.getMultiplier(deposit.end - deposit.start)
             });
         } 
 

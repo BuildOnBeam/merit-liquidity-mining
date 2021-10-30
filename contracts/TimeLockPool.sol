@@ -34,7 +34,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
-        require(maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
+        require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
     }
