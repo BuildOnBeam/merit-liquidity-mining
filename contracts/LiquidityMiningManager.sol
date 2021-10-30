@@ -127,7 +127,7 @@ contract LiquidityMiningManager is TokenSaver {
         for(uint256 i = 0; i < pools.length; i ++) {
             Pool memory pool = pools[i];
             uint256 poolRewardAmount = totalRewardAmount * pool.weight / totalWeight;
-            // ignore tx failing
+            // Ignore tx failing to prevent a single pool from halting reward distribution
             address(pool.poolContract).call(abi.encodeWithSelector(pool.poolContract.distributeRewards.selector, poolRewardAmount));
         }
 
