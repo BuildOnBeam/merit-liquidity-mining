@@ -75,8 +75,8 @@ abstract contract AbstractRewards is IAbstractRewards {
 
   /** 
    * @notice Distributes rewards to token holders.
-   * @dev It reverts if the total supply is 0.
-   * It emits the `FundsDistributed` event if the amount to distribute is greater than 0.
+   * @dev It reverts if the total shares is 0.
+   * It emits the `RewardsDistributed` event if the amount to distribute is greater than 0.
    * About undistributed rewards:
    *   In each distribution, there is a small amount which does not get distributed,
    *   which is `(amount * POINTS_MULTIPLIER) % totalShares()`.
@@ -85,7 +85,7 @@ abstract contract AbstractRewards is IAbstractRewards {
    */
   function _distributeRewards(uint256 _amount) internal {
     uint256 shares = getTotalShares();
-    require(shares > 0, "AbstractRewards._distributeRewards: total share suppy is zero");
+    require(shares > 0, "AbstractRewards._distributeRewards: total share supply is zero");
 
     if (_amount > 0) {
       pointsPerShare = pointsPerShare + (_amount * POINTS_MULTIPLIER / shares);
