@@ -54,7 +54,7 @@ contract LiquidityMiningManager is TokenSaver {
         distributeRewards();
         require(_poolContract != address(0), "LiquidityMiningManager.addPool: pool contract must be set");
         require(!poolAdded[_poolContract], "LiquidityMiningManager.addPool: Pool already added");
-        require(pools.length < MAX_POOL_COUNT, "LiquidityMiningManager.addPool: Max amount of pools reached")
+        require(pools.length < MAX_POOL_COUNT, "LiquidityMiningManager.addPool: Max amount of pools reached");
         // add pool
         pools.push(Pool({
             poolContract: IBasePool(_poolContract),
