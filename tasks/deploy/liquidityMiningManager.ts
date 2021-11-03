@@ -27,4 +27,5 @@ task("deploy-liquidity-mining-manager")
                 ]
             });
         }
+        return liquidityMiningManager;
 })
