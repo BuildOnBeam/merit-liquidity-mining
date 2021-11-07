@@ -6,7 +6,7 @@ import { constants, utils } from "ethers";
 import { captureRejectionSymbol } from "events";
 
 const MC = "0x949d48eca67b17269629c7194f4b727d4ef9e5d6";
-const LP = ""; // TODO set this
+const LP = "0xcCb63225a7B19dcF66717e4d40C9A72B39331d61";
 const multisig = "0x7e9e4c0876b2102f33a1d82117cc73b7fddd0032";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
