@@ -12,7 +12,8 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 
 task("deploy-liquidity-mining")
     .addFlag("verify")
-    .setAction(async(taskArgs, { run }) => {
+    .setAction(async(taskArgs, { run, ethers }) => {
+    const signers = await ethers.getSigners();
     const liquidityMiningManager:LiquidityMiningManager = await run("deploy-liquidity-mining-manager", {
         rewardToken: MC,
         rewardSource: multisig, //multi sig is where the rewards will be stored. 
@@ -64,6 +65,11 @@ task("deploy-liquidity-mining")
         verify: taskArgs.verify
     });
 
+
+    // assign gov role to deployer
+    const GOV_ROLE = await liquidityMiningManager.GOV_ROLE();
+    await liquidityMiningManager.grantRole(GOV_ROLE, signers[0].address);
+
     // Add pools
     console.log("Adding MC Pool");
     await (await liquidityMiningManager.addPool(mcPool.address, utils.parseEther("0.2"))).wait(3);
@@ -71,17 +77,25 @@ task("deploy-liquidity-mining")
     await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.8"))).wait(3);
 
     // Assign GOV, DISTRIBUTOR and DEFAULT_ADMIN roles to multisig
-
-    const GOV_ROLE = await liquidityMiningManager.GOV_ROLE();
     const REWARD_DISTRIBUTOR_ROLE = await liquidityMiningManager.REWARD_DISTRIBUTOR_ROLE();
     const DEFAULT_ADMIN_ROLE = await liquidityMiningManager.DEFAULT_ADMIN_ROLE();
 
+
+    console.log("setting lmm roles");
+    // renounce gov role from deployer
+    console.log("renouncing gov role");
+    await (await liquidityMiningManager.renounceRole(GOV_ROLE, signers[0].address)).wait(3);
     console.log("Assigning GOV_ROLE");
     await (await liquidityMiningManager.grantRole(GOV_ROLE, multisig)).wait(3);
     console.log("Assigning REWARD_DISTRIBUTOR_ROLE");
     await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, multisig)).wait(3);
     console.log("Assigning DEFAULT_ADMIN_ROLE");
     await (await liquidityMiningManager.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
+
+    console.log("Assigning DEFAULT_ADMIN roles on pools");
+    await (await escrowPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
+    await (await mcPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
+    await (await mcLPPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
 
     console.log("DONE");
 
