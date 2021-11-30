@@ -20,18 +20,22 @@ task("deploy-liquidity-mining")
         verify: taskArgs.verify
     });
 
+    // await liquidityMiningManager.deployed();
+
     const escrowPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Escrowed Merit Circle",
         symbol: "EMC",
         depositToken: MC,
         rewardToken: MC, //leaves possibility for xSushi like payouts on staked MC
         escrowPool: constants.AddressZero,
-        escrowPortion: 0, //rewards from pool itself are not locked
-        escrowDuration: 0, // no rewards escrowed so 0 escrow duration
-        maxBonus: 0, // no bonus needed for longer locking durations
-        maxLockDuration: ONE_YEAR * 10, // Can be used to lock up to 10 years
+        escrowPortion: "0", //rewards from pool itself are not locked
+        escrowDuration: "0", // no rewards escrowed so 0 escrow duration
+        maxBonus: "0", // no bonus needed for longer locking durations
+        maxLockDuration: (ONE_YEAR * 10).toString(), // Can be used to lock up to 10 years
         verify: taskArgs.verify
     });
+
+    // await escrowPool.deployed();
 
     const mcPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Staked Merit Circle",
@@ -39,12 +43,14 @@ task("deploy-liquidity-mining")
         depositToken: MC, // users stake MC tokens
         rewardToken: MC, // rewards is MC token
         escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
-        escrowPortion: constants.WeiPerEther, // 100% is locked
-        escrowDuration: ONE_YEAR, // locked for 1 year
-        maxBonus: constants.WeiPerEther, // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
-        maxLockDuration: ONE_YEAR, // Users can lock up to 1 year
+        escrowPortion: "1", // 100% is locked
+        escrowDuration: ONE_YEAR.toString(), // locked for 1 year
+        maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
+        maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
         verify: taskArgs.verify
     });
+
+    // await mcPool.deployed();
 
     const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Staked Merit Circle Uniswap LP",
@@ -52,12 +58,14 @@ task("deploy-liquidity-mining")
         depositToken: LP, // users stake LP tokens
         rewardToken: MC, // rewards is MC token
         escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
-        escrowPortion: constants.WeiPerEther, // 100% is locked
-        escrowDuration: ONE_YEAR, // locked for 1 year
-        maxBonus: constants.WeiPerEther, // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
-        maxLockDuration: ONE_YEAR, // Users can lock up to 1 year
+        escrowPortion: "1", // 100% is locked
+        escrowDuration: ONE_YEAR.toString(), // locked for 1 year
+        maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
+        maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
         verify: taskArgs.verify
     });
+
+    // await mcLPPool.deployed();
 
     const view:View = await run("deploy-view", {
         liquidityMiningManager: liquidityMiningManager.address,
@@ -68,7 +76,10 @@ task("deploy-liquidity-mining")
 
     // assign gov role to deployer
     const GOV_ROLE = await liquidityMiningManager.GOV_ROLE();
-    await liquidityMiningManager.grantRole(GOV_ROLE, signers[0].address);
+    const REWARD_DISTRIBUTOR_ROLE = await liquidityMiningManager.REWARD_DISTRIBUTOR_ROLE();
+    const DEFAULT_ADMIN_ROLE = await liquidityMiningManager.DEFAULT_ADMIN_ROLE();
+    (await (await liquidityMiningManager.grantRole(GOV_ROLE, signers[0].address)).wait(3));
+    (await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, signers[0].address)).wait(3));
 
     // Add pools
     console.log("Adding MC Pool");
@@ -77,14 +88,12 @@ task("deploy-liquidity-mining")
     await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.8"))).wait(3);
 
     // Assign GOV, DISTRIBUTOR and DEFAULT_ADMIN roles to multisig
-    const REWARD_DISTRIBUTOR_ROLE = await liquidityMiningManager.REWARD_DISTRIBUTOR_ROLE();
-    const DEFAULT_ADMIN_ROLE = await liquidityMiningManager.DEFAULT_ADMIN_ROLE();
-
-
     console.log("setting lmm roles");
     // renounce gov role from deployer
     console.log("renouncing gov role");
     await (await liquidityMiningManager.renounceRole(GOV_ROLE, signers[0].address)).wait(3);
+    console.log("renouncing distributor role");
+    await (await liquidityMiningManager.renounceRole(REWARD_DISTRIBUTOR_ROLE, signers[0].address)).wait(3);
     console.log("Assigning GOV_ROLE");
     await (await liquidityMiningManager.grantRole(GOV_ROLE, multisig)).wait(3);
     console.log("Assigning REWARD_DISTRIBUTOR_ROLE");
@@ -107,6 +116,6 @@ task("deploy-liquidity-mining")
         view: view.address
     });
 
-    console.log("CHECK IF EVERYTHING IS CORRECTLY SETUP AND THEN RENOUNCE THE DEFAULT_ADMIN_ROLE ON THE liquidityMiningManager CONTRACT FROM THE DEPLOYER ADDRESS");
+    console.log("CHECK IF EVERYTHING IS CORRECTLY SETUP AND THEN RENOUNCE THE DEFAULT_ADMIN_ROLE and pools ON THE liquidityMiningManager CONTRACT FROM THE DEPLOYER ADDRESS");
     console.log("❤⭕");
 });
