@@ -52,4 +52,6 @@ task("deploy-time-lock-non-transferable-pool")
             });
         }
         console.log("done");
+
+        return timeLockNonTransferablePool;
 });

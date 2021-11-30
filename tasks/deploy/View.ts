@@ -28,4 +28,6 @@ task("deploy-view")
         }
 
         console.log("Done");
+
+        return view;
 });
