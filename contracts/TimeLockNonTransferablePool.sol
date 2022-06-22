@@ -2,8 +2,11 @@
 pragma solidity 0.8.7;
 
 import "./TimeLockPool.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TimeLockNonTransferablePool is TimeLockPool {
+
+contract TimeLockNonTransferablePool is Initializable, TimeLockPool {
+/*
     constructor(
         string memory _name,
         string memory _symbol,
@@ -16,6 +19,20 @@ contract TimeLockNonTransferablePool is TimeLockPool {
         uint256 _maxLockDuration
     ) TimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration) {
 
+    }
+*/
+    function initializeTimeLockNonTransferablePool(
+        string memory _name,
+        string memory _symbol,
+        address _depositToken,
+        address _rewardToken,
+        address _escrowPool,
+        uint256 _escrowPortion,
+        uint256 _escrowDuration,
+        uint256 _maxBonus,
+        uint256 _maxLockDuration
+    ) external initializer {
+        initializerTimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration);
     }
 
     // disable transfers

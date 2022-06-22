@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TokenSaver is AccessControlEnumerable {
-    using SafeERC20 for IERC20;
+contract TokenSaver is AccessControlEnumerableUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     bytes32 public constant TOKEN_SAVER_ROLE = keccak256("TOKEN_SAVER_ROLE");
 
@@ -16,13 +17,17 @@ contract TokenSaver is AccessControlEnumerable {
         require(hasRole(TOKEN_SAVER_ROLE, _msgSender()), "TokenSaver.onlyTokenSaver: permission denied");
         _;
     }
-
+/*
     constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    }
+*/
+    function initilizeTokenSaver() internal initializer {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
     function saveToken(address _token, address _receiver, uint256 _amount) external onlyTokenSaver {
-        IERC20(_token).safeTransfer(_receiver, _amount);
+        IERC20Upgradeable(_token).safeTransfer(_receiver, _amount);
         emit TokenSaved(_msgSender(), _receiver, _token, _amount);
     }
 

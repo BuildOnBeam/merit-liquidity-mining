@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
-contract TimeLockPool is BasePool, ITimeLockPool {
-    using Math for uint256;
-    using SafeERC20 for IERC20;
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-    uint256 public immutable maxBonus;
-    uint256 public immutable maxLockDuration;
+contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
+    using MathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    uint256 public maxBonus;
+    uint256 public maxLockDuration;
     uint256 public constant MIN_LOCK_DURATION = 10 minutes;
     
     mapping(address => Deposit[]) public depositsOf;
@@ -23,6 +25,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint64 start;
         uint64 end;
     }
+/*
     constructor(
         string memory _name,
         string memory _symbol,
@@ -34,6 +37,23 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
+        require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
+        maxBonus = _maxBonus;
+        maxLockDuration = _maxLockDuration;
+    }
+*/
+    function initializerTimeLockPool(
+        string memory _name,
+        string memory _symbol,
+        address _depositToken,
+        address _rewardToken,
+        address _escrowPool,
+        uint256 _escrowPortion,
+        uint256 _escrowDuration,
+        uint256 _maxBonus,
+        uint256 _maxLockDuration
+    ) internal initializer {
+        initializerBasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;

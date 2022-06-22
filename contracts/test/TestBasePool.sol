@@ -2,9 +2,10 @@
 pragma solidity 0.8.7;
 
 import "../base/BasePool.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TestBasePool is BasePool {
-
+contract TestBasePool is Initializable, BasePool {
+/*
     constructor(
         string memory _name,
         string memory _symbol,
@@ -16,6 +17,8 @@ contract TestBasePool is BasePool {
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
         // silence
     }
+*/
+
     function mint(address _receiver, uint256 _amount) external {
         _mint(_receiver, _amount);
     }
