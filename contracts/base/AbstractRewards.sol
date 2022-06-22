@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import "../interfaces/IAbstractRewards.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
@@ -18,9 +18,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * into this abstract contract which can be inherited by anything tracking ownership of reward shares.
  */
 abstract contract AbstractRewards is Initializable, IAbstractRewards {
-  using SafeCast for uint128;
-  using SafeCast for uint256;
-  using SafeCast for int256;
+  using SafeCastUpgradeable for uint128;
+  using SafeCastUpgradeable for uint256;
+  using SafeCastUpgradeable for int256;
 
 /* ========  Constants  ======== */
   uint128 public constant POINTS_MULTIPLIER = type(uint128).max;
