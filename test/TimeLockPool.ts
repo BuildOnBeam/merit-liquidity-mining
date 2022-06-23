@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants } from "ethers";
 import hre from "hardhat";
-import { TestToken__factory, TimeLockPool__factory } from "../typechain";
+import { TestToken__factory, TimeLockPool__factory, TestTimeLockPool__factory, TestTimeLockPool } from "../typechain";
 import { TestToken } from "../typechain";
 import { TimeLockPool } from "../typechain/TimeLockPool";
 import TimeTraveler from "../utils/TimeTraveler";
@@ -24,8 +24,8 @@ describe("TimeLockPool", function () {
     let account4: SignerWithAddress;
     let signers: SignerWithAddress[];
 
-    let timeLockPool: TimeLockPool;
-    let escrowPool: TimeLockPool;
+    let timeLockPool: TestTimeLockPool;
+    let escrowPool: TestTimeLockPool;
     let depositToken: TestToken;
     let rewardToken: TestToken;
     
@@ -49,7 +49,7 @@ describe("TimeLockPool", function () {
         await depositToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account1.address, INITIAL_MINT);
 
-        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
+        const timeLockPoolFactory = new TestTimeLockPool__factory(deployer);
         
         escrowPool = await timeLockPoolFactory.deploy(
             "ESCROW",

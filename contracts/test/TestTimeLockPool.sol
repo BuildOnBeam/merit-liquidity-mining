@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 import "../TimeLockPool.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TestBasePool is Initializable, TimeLockPool {
+contract TestTimeLockPool is Initializable, TimeLockPool {
 
     constructor(        
             string memory _name,

@@ -2,14 +2,14 @@ import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import hre from "hardhat";
-import { TestToken, TestToken__factory, TokenSaver, TokenSaver__factory } from "../typechain";
+import { TestToken, TestToken__factory, TokenSaver, TokenSaver__factory, TestTokenSaver, TestTokenSaver__factory } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 
 const INITIAL_MINT = parseEther("100");
 
 describe("TokenSaver", function () {
 
-    let tokenSaver: TokenSaver;
+    let tokenSaver: TestTokenSaver;
     let deployer: SignerWithAddress;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
@@ -25,7 +25,7 @@ describe("TokenSaver", function () {
             ...signers
         ] = await hre.ethers.getSigners();
 
-        tokenSaver = await (new TokenSaver__factory(deployer)).deploy();
+        tokenSaver = await (new TestTokenSaver__factory(deployer)).deploy();
         token = await (new TestToken__factory(deployer)).deploy("TEST", "TEST");
 
         await token.mint(tokenSaver.address, INITIAL_MINT);
