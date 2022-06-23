@@ -49,7 +49,7 @@ abstract contract BasePool is Initializable, ERC20VotesUpgradeable, AbstractRewa
         }
     }
 */
-    function initializerBasePool(
+    function initializeBasePool(
         string memory _name,
         string memory _symbol,
         address _depositToken,

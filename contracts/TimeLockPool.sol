@@ -42,7 +42,7 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         maxLockDuration = _maxLockDuration;
     }
 */
-    function initializerTimeLockPool(
+    function initializeTimeLockPool(
         string memory _name,
         string memory _symbol,
         address _depositToken,
@@ -53,7 +53,7 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration
     ) internal initializer {
-        initializerBasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
+        initializeBasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;

@@ -32,7 +32,7 @@ contract TimeLockNonTransferablePool is Initializable, TimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration
     ) external initializer {
-        initializerTimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration);
+        initializeTimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration);
     }
 
     // disable transfers
