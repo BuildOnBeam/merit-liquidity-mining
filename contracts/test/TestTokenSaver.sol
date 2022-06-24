@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract TestTokenSaver is Initializable, TokenSaver {
 
     constructor()  {
-        initilizeTokenSaver();
+        //initilizeTokenSaver();
     }
 
 }

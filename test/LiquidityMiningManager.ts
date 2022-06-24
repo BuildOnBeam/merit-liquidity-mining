@@ -49,7 +49,11 @@ describe("LiquidityMiningManager", function () {
 
         const poolFactory = new TimeLockNonTransferablePool__factory(deployer);
 
-        escrowPool = await poolFactory.deploy(
+        escrowPool = await poolFactory.deploy();
+
+        liquidityMiningManager = await (new LiquidityMiningManager__factory(deployer)).deploy(rewardToken.address, rewardSource.address);
+        
+        await escrowPool.initializeTimeLockNonTransferablePool(
             "EscrowPool",
             "ESCRW",
             rewardToken.address,
@@ -61,27 +65,24 @@ describe("LiquidityMiningManager", function () {
             ESCROW_DURATION
         );
 
-        liquidityMiningManager = await (new LiquidityMiningManager__factory(deployer)).deploy(rewardToken.address, rewardSource.address);
-        
-
         // setup rewardSource
         await rewardToken.mint(rewardSource.address, INITIAL_REWARD_MINT);
         await rewardToken.connect(rewardSource).approve(liquidityMiningManager.address, constants.MaxUint256);
 
         for(let i = 0; i < POOL_COUNT; i ++) {
-            pools.push(
-                await poolFactory.deploy(
-                    `Pool ${i}`,
-                    `P${i}`,
-                    depositToken.address,
-                    rewardToken.address,
-                    escrowPool.address,
-                    ESCROW_PORTION,
-                    ESCROW_DURATION,
-                    0,
-                    ESCROW_PORTION
-                )
-            );         
+            let genericPool = await poolFactory.deploy();
+            await genericPool.initializeTimeLockNonTransferablePool(
+                `Pool ${i}`,
+                `P${i}`,
+                depositToken.address,
+                rewardToken.address,
+                escrowPool.address,
+                ESCROW_PORTION,
+                ESCROW_DURATION,
+                0,
+                ESCROW_PORTION
+            );
+            pools.push(genericPool);       
         }
 
         // assign gov role to account1
