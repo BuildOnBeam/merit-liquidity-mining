@@ -12,9 +12,7 @@ import "../interfaces/ITimeLockPool.sol";
 import "./AbstractRewards.sol";
 import "./TokenSaver.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-abstract contract BasePool is Initializable, ERC20VotesUpgradeable, AbstractRewards, IBasePool, TokenSaver {
+abstract contract BasePool is ERC20VotesUpgradeable, AbstractRewards, IBasePool, TokenSaver {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCastUpgradeable for uint256;
     using SafeCastUpgradeable for int256;
@@ -26,29 +24,7 @@ abstract contract BasePool is Initializable, ERC20VotesUpgradeable, AbstractRewa
     uint256 public escrowDuration; // escrow duration in seconds
 
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
-/*
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _depositToken,
-        address _rewardToken,
-        address _escrowPool,
-        uint256 _escrowPortion,
-        uint256 _escrowDuration
-    ) ERC20Permit(_name) ERC20(_name, _symbol) AbstractRewards(balanceOf, totalSupply) {
-        require(_escrowPortion <= 1e18, "BasePool.constructor: Cannot escrow more than 100%");
-        require(_depositToken != address(0), "BasePool.constructor: Deposit token must be set");
-        depositToken = IERC20(_depositToken);
-        rewardToken = IERC20(_rewardToken);
-        escrowPool = ITimeLockPool(_escrowPool);
-        escrowPortion = _escrowPortion;
-        escrowDuration = _escrowDuration;
 
-        if(_rewardToken != address(0) && _escrowPool != address(0)) {
-            IERC20(_rewardToken).safeApprove(_escrowPool, type(uint256).max);
-        }
-    }
-*/
     function initializeBasePool(
         string memory _name,
         string memory _symbol,
@@ -61,6 +37,7 @@ abstract contract BasePool is Initializable, ERC20VotesUpgradeable, AbstractRewa
         __ERC20Permit_init(_name);
         __ERC20_init(_name, _symbol);
         initializeAbstractRewards(balanceOf, totalSupply);
+        initializeTokenSaver();
         require(_escrowPortion <= 1e18, "BasePool.constructor: Cannot escrow more than 100%");
         require(_depositToken != address(0), "BasePool.constructor: Deposit token must be set");
         depositToken = IERC20Upgradeable(_depositToken);

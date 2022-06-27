@@ -4,7 +4,6 @@ pragma solidity 0.8.7;
 import "../interfaces/IAbstractRewards.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 /**
  * @dev Based on: https://github.com/indexed-finance/dividends/blob/master/contracts/base/AbstractDividends.sol
  * Renamed dividends to rewards.
@@ -33,15 +32,6 @@ abstract contract AbstractRewards is Initializable, IAbstractRewards {
   uint256 public pointsPerShare;
   mapping(address => int256) public pointsCorrection;
   mapping(address => uint256) public withdrawnRewards;
-/*
-  constructor(
-    function(address) view returns (uint256) getSharesOf_,
-    function() view returns (uint256) getTotalShares_
-  ) {
-    getSharesOf = getSharesOf_;
-    getTotalShares = getTotalShares_;
-  }
-*/
   function initializeAbstractRewards(
     function(address) view returns (uint256) getSharesOf_,
     function() view returns (uint256) getTotalShares_

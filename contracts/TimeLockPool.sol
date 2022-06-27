@@ -8,9 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
+contract TimeLockPool is BasePool, ITimeLockPool {
     using MathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -25,23 +23,7 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint64 start;
         uint64 end;
     }
-/*
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        address _depositToken,
-        address _rewardToken,
-        address _escrowPool,
-        uint256 _escrowPortion,
-        uint256 _escrowDuration,
-        uint256 _maxBonus,
-        uint256 _maxLockDuration
-    ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
-        require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
-        maxBonus = _maxBonus;
-        maxLockDuration = _maxLockDuration;
-    }
-*/
+
     function initializeTimeLockPool(
         string memory _name,
         string memory _symbol,
