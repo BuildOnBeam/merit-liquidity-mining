@@ -6,7 +6,7 @@ import hre from "hardhat";
 import { HeritageClause } from "typescript";
 import { TestToken__factory, TimeLockNonTransferablePool__factory } from "../typechain";
 import { TestToken } from "../typechain";
-//import { TimeLockNonTransferablePool } from "../typechain/TimeLockNonTransferablePool";
+import { TimeLockNonTransferablePool } from "../typechain/TimeLockNonTransferablePool";
 import TimeTraveler from "../utils/TimeTraveler";
 
 import { UpgradeableContract } from '@openzeppelin/upgrades-core';
@@ -18,7 +18,7 @@ const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
 const INITIAL_MINT = parseEther("1000000");
 const DEPOSIT_AMOUNT = parseEther("1000");
 
-describe.only("TimeLockNonTransferablePool", function () {
+describe("TimeLockNonTransferablePool", function () {
 
     let deployer: SignerWithAddress;
     let account1: SignerWithAddress;
@@ -163,11 +163,7 @@ describe.only("TimeLockNonTransferablePool", function () {
         const proxyAddress = timeLockNonTransferablePool.address;
         const implementationAddress = await hre.upgrades.erc1967.getImplementationAddress(timeLockNonTransferablePool.address);
         const adminAddress = await hre.upgrades.erc1967.getAdminAddress(timeLockNonTransferablePool.address);
-
-        console.log(proxyAddress," timeLockNonTransferablePool(proxy) address");
-        console.log(implementationAddress," getImplementationAddress")
-        console.log(adminAddress," getAdminAddress")
-        
+       
         const proxyContract = await hre.ethers.getContractAt("TimeLockNonTransferablePool", proxyAddress)
         const implementationContract = await hre.ethers.getContractAt("TimeLockNonTransferablePool", implementationAddress)
         
