@@ -4,9 +4,9 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IBasePool.sol";
-import "./base/TokenSaver.sol";
+import "./base/NonUpgradeableTokenSaver.sol";
 
-contract LiquidityMiningManager is TokenSaver {
+contract LiquidityMiningManager is NonUpgradeableTokenSaver {
     using SafeERC20 for IERC20;
 
     bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");

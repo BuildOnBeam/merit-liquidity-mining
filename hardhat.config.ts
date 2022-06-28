@@ -4,6 +4,7 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import '@openzeppelin/hardhat-upgrades';
 
 if(!process.env.COMPILE_ONLY) {
   require("./tasks/accounts");

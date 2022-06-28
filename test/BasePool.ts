@@ -9,7 +9,9 @@ import {
     TestToken,
     TestToken__factory,
     TimeLockPool,
-    TimeLockPool__factory
+    TimeLockPool__factory,
+    TestTimeLockPool,
+    TestTimeLockPool__factory
 } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 
@@ -60,9 +62,8 @@ describe("BasePool", function () {
         await rewardToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account2.address, INITIAL_MINT);
 
-        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
-        escrowPool = await timeLockPoolFactory.deploy();
-        escrowPool.initializeTimeLockPool(
+        const testTimeLockPoolFactory = new TestTimeLockPool__factory(deployer);
+        escrowPool = await testTimeLockPoolFactory.deploy(
             "Escrow Pool",
             "ESCRW",
             rewardToken.address,
@@ -74,7 +75,6 @@ describe("BasePool", function () {
             ESCROW_DURATION
         )
 
-/*
         const testBasePoolFactory = new TestBasePool__factory(deployer);    
         basePool = await testBasePoolFactory.deploy(
             TOKEN_NAME,
@@ -85,18 +85,6 @@ describe("BasePool", function () {
             ESCROW_PORTION,
             ESCROW_DURATION
         );
-        */
-        const basePoolFactory = new TimeLockPool__factory(deployer);
-        basePool = await basePoolFactory.deploy();
-        basePool.connect(deployer).initializeTestBasePool(
-            TOKEN_NAME,
-            TOKEN_SYMBOL,
-            depositToken.address,
-            rewardToken.address,
-            escrowPool.address,
-            ESCROW_PORTION,
-            ESCROW_DURATION
-        )
 
         // connect account1 to all contracts
         depositToken = depositToken.connect(account1);
