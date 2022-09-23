@@ -39,8 +39,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         maxLockDuration = _maxLockDuration;
     }
 
+    error DepositExpiredError();
+    error ZeroAmountError();
+
     event Deposited(uint256 amount, uint256 duration, address indexed receiver, address indexed from);
     event Withdrawn(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
+    event LockExtended(uint256 duration, address indexed from);
+    event LockIncreased(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
 
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         require(_amount > 0, "TimeLockPool.deposit: cannot deposit 0");
@@ -51,13 +56,14 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
 
+        uint256 mintAmount = _amount * getMultiplier(duration) / 1e18;
+
         depositsOf[_receiver].push(Deposit({
             amount: _amount,
+            shareAmount: mintAmount
             start: uint64(block.timestamp),
             end: uint64(block.timestamp) + uint64(duration)
         }));
-
-        uint256 mintAmount = _amount * getMultiplier(duration) / 1e18;
 
         _mint(_receiver, mintAmount);
         emit Deposited(_amount, duration, _receiver, _msgSender());
@@ -83,8 +89,73 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit Withdrawn(_depositId, _receiver, _msgSender(), userDeposit.amount);
     }
 
+    function extendLock(uint256 _depositId, uint256 _increaseDuration) external {
+        // Check if actually increasing
+        if (_increaseDuration == 0) {
+            revert ZeroDurationError();
+        }
+
+        // Only can extend if it has not expired
+        if (block.timestamp >= userDeposit.end) {
+            revert DepositExpiredError();
+        }
+
+        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+
+        // Enforce min increase to prevent flash loan or MEV transaction ordering
+        uint256 increaseDuration = _increaseDuration.max(MIN_LOCK_DURATION);
+
+        // Don't allow locking > maxLockDuration
+        uint256 duration = maxLockDuration.min(uint256(userDeposit.end - userDeposit.start) + increaseDuration);
+
+        uint256 mintAmount = userDeposit.amount * getMultiplier(duration) / 1e18;
+
+        // Multiplier curve changes with time, need to check if the mint amount is bigger, equal or smaller than the already minted
+        
+        // If the new amount if bigger mint the difference
+        if (mintAmount > userDeposit.shareAmount) {
+            userDeposit.shareAmount =  mintAmount;
+            _mint(_receiver, mintAmount - userDeposit.shareAmount);
+        // If the new amount is less then burn that difference
+        } else if (mintAmount < userDeposit.shareAmount) {
+            userDeposit.shareAmount =  mintAmount;
+            _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
+        }
+
+        userDeposit.end = userDeposit.start + duration;
+        emit LockExtended(_increaseDuration, _msgSender());
+    }
+
+    function increaseLock(uint256 _depositId, address _receiver, uint256 _increaseAmount) external {
+        // Check if actually increasing
+        if (_increaseAmount == 0) {
+            revert ZeroAmountError();
+        }
+
+        // Only can extend if it has not expired
+        if (block.timestamp >= userDeposit.end) {
+            revert DepositExpiredError();
+        }
+
+        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+
+        depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
+
+        // Multiplier should be acording the remaining time to the deposit to end
+        uint256 remainingDuration = uint256(userDeposit.end - block.timestamp);
+
+        uint256 mintAmount = _increaseAmount * getMultiplier(remainingDuration) / 1e18;
+
+        depositsOf[_receiver].amount += _increaseAmount;
+        depositsOf[_receiver].shareAmount += mintAmount;
+
+        _mint(_receiver, mintAmount);
+        emit LockIncreased(_depositId, _receiver, _msgSender(), _increaseAmount);
+    }
+
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
-        return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
+        return 1e18;
+        //return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
     }
 
     function getTotalDeposit(address _account) public view returns(uint256) {
