@@ -20,6 +20,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     struct Deposit {
         uint256 amount;
+        uint256 shareAmount;
         uint64 start;
         uint64 end;
     }
@@ -40,6 +41,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     }
 
     error DepositExpiredError();
+    error ZeroDurationError();
     error ZeroAmountError();
 
     event Deposited(uint256 amount, uint256 duration, address indexed receiver, address indexed from);
@@ -60,7 +62,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         depositsOf[_receiver].push(Deposit({
             amount: _amount,
-            shareAmount: mintAmount
+            shareAmount: mintAmount,
             start: uint64(block.timestamp),
             end: uint64(block.timestamp) + uint64(duration)
         }));
@@ -95,12 +97,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert ZeroDurationError();
         }
 
+        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+
         // Only can extend if it has not expired
         if (block.timestamp >= userDeposit.end) {
             revert DepositExpiredError();
         }
-
-        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
 
         // Enforce min increase to prevent flash loan or MEV transaction ordering
         uint256 increaseDuration = _increaseDuration.max(MIN_LOCK_DURATION);
@@ -115,14 +117,14 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // If the new amount if bigger mint the difference
         if (mintAmount > userDeposit.shareAmount) {
             userDeposit.shareAmount =  mintAmount;
-            _mint(_receiver, mintAmount - userDeposit.shareAmount);
+            _mint(_msgSender(), mintAmount - userDeposit.shareAmount);
         // If the new amount is less then burn that difference
         } else if (mintAmount < userDeposit.shareAmount) {
             userDeposit.shareAmount =  mintAmount;
             _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
         }
 
-        userDeposit.end = userDeposit.start + duration;
+        depositsOf[_msgSender()][_depositId].end = userDeposit.start + uint64(duration);
         emit LockExtended(_increaseDuration, _msgSender());
     }
 
@@ -132,12 +134,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert ZeroAmountError();
         }
 
+        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+
         // Only can extend if it has not expired
         if (block.timestamp >= userDeposit.end) {
             revert DepositExpiredError();
         }
-
-        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
 
         depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
 
@@ -146,16 +148,16 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         uint256 mintAmount = _increaseAmount * getMultiplier(remainingDuration) / 1e18;
 
-        depositsOf[_receiver].amount += _increaseAmount;
-        depositsOf[_receiver].shareAmount += mintAmount;
+        depositsOf[_receiver][_depositId].amount += _increaseAmount;
+        depositsOf[_receiver][_depositId].shareAmount += mintAmount;
 
         _mint(_receiver, mintAmount);
         emit LockIncreased(_depositId, _receiver, _msgSender(), _increaseAmount);
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
-        return 1e18;
-        //return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
+        //return 1e18;
+        return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
     }
 
     function getTotalDeposit(address _account) public view returns(uint256) {
