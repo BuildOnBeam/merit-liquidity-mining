@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
+import "hardhat/console.sol";
+
 contract TimeLockPool is BasePool, ITimeLockPool {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -103,7 +105,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (block.timestamp >= userDeposit.end) {
             revert DepositExpiredError();
         }
-
+        
         // Enforce min increase to prevent flash loan or MEV transaction ordering
         uint256 increaseDuration = _increaseDuration.max(MIN_LOCK_DURATION);
 
@@ -116,11 +118,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         
         // If the new amount if bigger mint the difference
         if (mintAmount > userDeposit.shareAmount) {
-            userDeposit.shareAmount =  mintAmount;
+            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
             _mint(_msgSender(), mintAmount - userDeposit.shareAmount);
         // If the new amount is less then burn that difference
         } else if (mintAmount < userDeposit.shareAmount) {
-            userDeposit.shareAmount =  mintAmount;
+            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
             _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
         }
 

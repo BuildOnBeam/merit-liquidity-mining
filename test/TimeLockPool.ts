@@ -1,4 +1,4 @@
-import { parseEther } from "@ethersproject/units";
+import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
@@ -200,5 +200,125 @@ describe("TimeLockPool", function () {
             expect(totalDeposit).to.eq(0);
             expect(depositTokenBalance).to.eq(DEPOSIT_AMOUNT);
         });
-    });  
+    });
+
+    describe("extendLock", async() => {
+        const DEPOSIT_AMOUNT = parseEther("176.378");
+        const THREE_MONTHS = MAX_LOCK_DURATION / 4;
+
+        beforeEach(async() => {
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, THREE_MONTHS, account1.address);
+        });
+
+        it("Extending with zero duration should fail", async() => {
+            await expect(timeLockPool.extendLock(0, 0)).to.be.revertedWith("ZeroDurationError()");
+        });
+        
+        it("Extending when deposit has already expired should fail", async() => {
+            await timeTraveler.increaseTime(MAX_LOCK_DURATION * 2);
+            await expect(timeLockPool.extendLock(0, THREE_MONTHS)).to.be.revertedWith("DepositExpiredError()");
+        });
+
+        it("Extending should emit event with the correct arguments", async() => {
+            await expect(timeLockPool.extendLock(0, THREE_MONTHS))
+            .to.emit(timeLockPool, "LockExtended")
+            .withArgs(THREE_MONTHS, account1.address);
+        });
+
+        it("Extending should extend the end time in the struct", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            expect(startUserDepostit.end.sub(startUserDepostit.start)).to.be.eq(THREE_MONTHS);
+
+            await timeLockPool.extendLock(0, THREE_MONTHS)
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            expect(endUserDepostit.end.sub(endUserDepostit.start)).to.be.eq(THREE_MONTHS * 2);
+        });
+
+        it("Extending should mint correct amount of tokens and change shareAmount in the struct", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const startBalance = await timeLockPool.balanceOf(account1.address);
+
+            await timeLockPool.extendLock(0, THREE_MONTHS)
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const endBalance = await timeLockPool.balanceOf(account1.address);
+
+            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
+            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
+            
+            const sixMonthsMultiplier = await timeLockPool.getMultiplier((THREE_MONTHS * 2));
+            const theoreticalEndShareAmount = DEPOSIT_AMOUNT.mul(sixMonthsMultiplier).div(parseEther("1"));
+
+            expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
+        });
+    });
+
+    describe("increaseLock", async() => {
+        const DEPOSIT_AMOUNT = parseEther("176.378");
+        const INCREASE_AMOUNT = parseEther("50");
+
+        beforeEach(async() => {
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, constants.MaxUint256, account1.address);
+        });
+
+        it("Increasing with zero amount should fail", async() => {
+            await expect(timeLockPool.increaseLock(0, account1.address, 0)).to.be.revertedWith("ZeroAmountError()");
+        });
+        
+        it("Increasing when deposit has already expired should fail", async() => {
+            await timeTraveler.increaseTime(MAX_LOCK_DURATION * 2);
+            await expect(timeLockPool.increaseLock(0, account1.address, INCREASE_AMOUNT)).to.be.revertedWith("DepositExpiredError()");
+        });
+
+        it("Increasing should emit event with the correct arguments", async() => {
+            await expect(timeLockPool.increaseLock(0, account1.address, INCREASE_AMOUNT))
+            .to.emit(timeLockPool, "LockIncreased")
+            .withArgs(0, account1.address, account1.address, INCREASE_AMOUNT);
+        });
+
+        it("Increasing should mint correct amount of tokens and change shareAmount in the struct", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const startBalance = await timeLockPool.balanceOf(account1.address);
+
+            await timeLockPool.increaseLock(0, account1.address, INCREASE_AMOUNT);
+
+            const increaseTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const endBalance = await timeLockPool.balanceOf(account1.address);
+
+            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
+            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
+            
+            const multiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(increaseTimestamp));
+            const theoreticalIncrease = INCREASE_AMOUNT.mul(multiplier).div(parseEther("1"));
+
+            expect(theoreticalIncrease.add(startUserDepostit.shareAmount)).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
+        });
+
+        it("Increasing in between start and end of deposit should do it correctly", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const startBalance = await timeLockPool.balanceOf(account1.address);
+
+            const nextBlockTimestamp = (startUserDepostit.end.sub(startUserDepostit.start)).div(2).add(startUserDepostit.start).toNumber();
+
+            await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
+
+            await timeLockPool.increaseLock(0, account1.address, INCREASE_AMOUNT);
+            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const endBalance = await timeLockPool.balanceOf(account1.address);
+
+            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
+            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
+            
+            // Using latest timestamp because setting next block timestamp may differ for some seconds
+            const multiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(latestBlockTimestamp));
+            const theoreticalIncrease = INCREASE_AMOUNT.mul(multiplier).div(parseEther("1"));
+
+            expect(theoreticalIncrease.add(startUserDepostit.shareAmount)).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
+        });
+    });
 });
