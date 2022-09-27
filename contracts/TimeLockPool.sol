@@ -93,7 +93,45 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit Withdrawn(_depositId, _receiver, _msgSender(), userDeposit.amount);
     }
 
-    function extendLock(uint256 _depositId, uint256 _increaseDuration) external {
+    function extendLock1(uint256 _depositId, uint256 _increaseDuration) external {
+        // Check if actually increasing
+        if (_increaseDuration == 0) {
+            revert ZeroDurationError();
+        }
+
+        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+
+        // Only can extend if it has not expired
+        if (block.timestamp >= userDeposit.end) {
+            revert DepositExpiredError();
+        }
+        
+        // Enforce min increase to prevent flash loan or MEV transaction ordering
+        uint256 increaseDuration = _increaseDuration.max(MIN_LOCK_DURATION);
+        
+        // New duration is the time expiration plus the increase
+        uint256 duration = maxLockDuration.min(uint256(userDeposit.end - block.timestamp) + increaseDuration);
+
+        uint256 mintAmount = userDeposit.amount * getMultiplier(duration) / 1e18;
+
+        // Multiplier curve changes with time, need to check if the mint amount is bigger, equal or smaller than the already minted
+        
+        // If the new amount if bigger mint the difference
+        if (mintAmount > userDeposit.shareAmount) {
+            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
+            _mint(_msgSender(), mintAmount - userDeposit.shareAmount);
+        // If the new amount is less then burn that difference
+        } else if (mintAmount < userDeposit.shareAmount) {
+            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
+            _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
+        }
+
+        depositsOf[_msgSender()][_depositId].start = uint64(block.timestamp);
+        depositsOf[_msgSender()][_depositId].end = uint64(block.timestamp) + uint64(duration);
+        emit LockExtended(_increaseDuration, _msgSender());
+    }
+
+    function extendLock2(uint256 _depositId, uint256 _increaseDuration) external {
         // Check if actually increasing
         if (_increaseDuration == 0) {
             revert ZeroDurationError();
