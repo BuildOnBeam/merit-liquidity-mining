@@ -11,7 +11,7 @@ import TimeTraveler from "../utils/TimeTraveler";
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
 const MAX_BONUS = parseEther("1");
-const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
+const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 4;
 const INITIAL_MINT = parseEther("1000000");
 const DEPOSIT_AMOUNT = parseEther("1000");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];

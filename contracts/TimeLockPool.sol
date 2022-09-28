@@ -44,6 +44,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
         curve = _curve;
         unit = _maxLockDuration / (curve.length - 1);
     }
@@ -51,7 +54,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error DepositExpiredError();
     error ZeroDurationError();
     error ZeroAmountError();
-    error ExceedingLengthError();
+    error ShortCurveError();
 
     event Deposited(uint256 amount, uint256 duration, address indexed receiver, address indexed from);
     event Withdrawn(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
@@ -234,28 +237,32 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     function setCurve(uint256[] calldata _curve) external {
         // TODO Add checks: permission (Gov role) and data validation
-        // TODO Add events
-
-        // if original curve is longer, replace points and pop the remaining ones
-        if (curve.length > _curve.length) {
-            for (uint i=0; i < _curve.length - _curve.length; i++) {
-                curve[i] = _curve[i];
-            }
-            for (uint j=0; j < curve.length - _curve.length; j++) {
-                curve.pop();
-            }
-            unit = maxLockDuration / (curve.length - 1);
-        // if curves are same length
-        } else if (curve.length == _curve.length) {
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        // same length curves
+        if (curve.length == _curve.length) {
             for (uint i=0; i < curve.length; i++) {
                 curve[i] = _curve[i];
             }
+        // replacing with a shorter curve
+        } else if (curve.length > _curve.length) {
+            for (uint i=0; i < _curve.length; i++) {
+                curve[i] = _curve[i];
+            }
+            uint initialLength = curve.length;
+            for (uint j=0; j < initialLength - _curve.length; j++) {
+                curve.pop();
+            }
+            unit = maxLockDuration / (curve.length - 1);
+        // replacing with a longer curve
         } else {
             for (uint i=0; i < curve.length; i++) {
                 curve[i] = _curve[i];
             }
-            for (uint j=0; j < _curve.length - curve.length; j++) {
-                curve.push(_curve[curve.length + j]);
+            uint initialLength = curve.length;
+            for (uint j=0; j < _curve.length - initialLength; j++) {
+                curve.push(_curve[initialLength + j]);
             }
             unit = maxLockDuration / (curve.length - 1);
         }
@@ -264,14 +271,16 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     function setCurvePoint(uint256 _newPoint, uint256 _position) external {
         // TODO Add some checks: permission (Gov role) and data validation
-        // TODO Add events
 
         if (_position < curve.length) {
             curve[_position] = _newPoint;
         } else if (_position == curve.length) {
             curve.push(_newPoint);
         } else {
-            revert ExceedingLengthError();
+            if (curve.length - 1 < 2) {
+                revert ShortCurveError();
+            }
+            curve.pop();
         }
         emit CurveChanged(_msgSender());
     }

@@ -11,8 +11,8 @@ import TimeTraveler from "../utils/TimeTraveler";
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
-const MAX_BONUS = parseEther("1");
-const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
+const MAX_BONUS = parseEther("5"); // Same as max value in the curve
+const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 4;
 const INITIAL_MINT = parseEther("1000000");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
 const CURVE = [
@@ -421,6 +421,289 @@ describe("TimeLockPool", function () {
             const theoreticalIncrease = INCREASE_AMOUNT.mul(multiplier).div(parseEther("1"));
 
             expect(theoreticalIncrease.add(startUserDepostit.shareAmount)).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
+        });
+    });
+
+    describe("setCurve and setCurvePoint", async() => {
+
+        function theoreticalMultiplier(
+            _duration: any,
+            curve: any
+        ) {
+            
+            const unit = Math.floor(MAX_LOCK_DURATION / (curve.length - 1))
+            const duration = Math.min(Math.max(Number(_duration), 600), MAX_LOCK_DURATION)
+            const n = Math.floor(duration / unit)
+
+            if (n == curve.length - 1) {
+                const mcn = hre.ethers.BigNumber.from(curve[n])
+                let result
+                if(mcn.lt(MAX_BONUS)) {
+                    result = mcn.add(parseEther("1"))
+                } else {
+                    result = MAX_BONUS.add(parseEther("1"))
+                }
+
+                return result.toString()
+            }
+
+            const mcn = hre.ethers.BigNumber.from(curve[n])
+            const mcn1 = hre.ethers.BigNumber.from(curve[n + 1])
+            const BNunit = hre.ethers.BigNumber.from(unit)
+            const BNn = hre.ethers.BigNumber.from(n)
+            const BNduration = hre.ethers.BigNumber.from(_duration)
+
+            const res = mcn.add(BNduration.sub(BNn.mul(BNunit)).mul(mcn1.sub(mcn)).div(BNunit))
+            let result
+            if(res.lt(MAX_BONUS)) {
+                result = res.add(parseEther("1"))
+            } else {
+                result = MAX_BONUS.add(parseEther("1"))
+            }
+
+            return result.toString()
+        }
+
+        it("Replacing with a same length curve should do it correctly", async() => {
+            const NEW_CURVE = CURVE.map(function(x) {
+                return (hre.ethers.BigNumber.from(x).mul(2).toString())
+            })
+            await timeLockPool.setCurve(NEW_CURVE);
+
+            for(let i=0; i< NEW_CURVE.length; i++){
+                const curvePoint = await timeLockPool.curve(i);
+                expect(curvePoint).to.be.eq(NEW_CURVE[i])
+            }
+            await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
+        })
+
+        it("Replacing with a shorter curve should do it correctly", async() => {
+            const NEW_CURVE = [(1e18).toString(), (2*1e18).toString()]
+            await timeLockPool.setCurve(NEW_CURVE);
+
+            for(let i=0; i< NEW_CURVE.length; i++){
+                const curvePoint = await timeLockPool.curve(i);
+                expect(curvePoint).to.be.eq(NEW_CURVE[i])
+            }
+            await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
+        })
+
+        it("Replacing with a longer curve should do it correctly", async() => {
+            const NEW_RAW_CURVE = [
+                0,
+                0.113450636781733,
+                0.23559102796425,
+                0.367086765506204,
+                0.508654422399196,
+                0.661065457561288,
+                0.825150419825931,
+                1.00180347393553,
+                1.19198727320361,
+                1.39673820539865,
+                1.61717204043653,
+                1.85449001065813,
+                2.10998535682594,
+                2.38505037551144,
+                2.6811840062773,
+                3,
+                3.34323571284532,
+                3.71276157381861,
+                4.11059127748229,
+                4.53889275738489,
+                5
+            ]
+           
+            const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
+                return (x*1e18).toString();
+            })
+            await timeLockPool.setCurve(NEW_CURVE);
+
+            for(let i=0; i< NEW_CURVE.length; i++){
+                const curvePoint = await timeLockPool.curve(i);
+                expect(curvePoint).to.be.eq(NEW_CURVE[i])
+            }
+            await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
+        })
+
+        it("Replacing a curve should emit an event", async() => {
+            const NEW_CURVE = CURVE.map(function(x) {
+                return (hre.ethers.BigNumber.from(x).mul(2).toString())
+            })
+            await expect(timeLockPool.setCurve(NEW_CURVE))            
+                .to.emit(timeLockPool, "CurveChanged")
+                .withArgs(account1.address);
+        })
+
+        it("Multiply correctly", async() => {
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+            const expectedResult1 = theoreticalMultiplier(MIN_LOCK_DURATION, CURVE)
+
+            const oneYearDuration = MAX_LOCK_DURATION / 4;
+            const oneYearMultiplier = await timeLockPool.getMultiplier(oneYearDuration);
+            const expectedResult2 = theoreticalMultiplier(oneYearDuration, CURVE)
+
+            const twoYearDuration = MAX_LOCK_DURATION / 2;
+            const twoYearMultiplier = await timeLockPool.getMultiplier(twoYearDuration);
+            const expectedResult3 = theoreticalMultiplier(twoYearDuration, CURVE)
+
+            const threeYearDuration = MAX_LOCK_DURATION * 3 / 4;
+            const threeYearMultiplier = await timeLockPool.getMultiplier(threeYearDuration);
+            const expectedResult4 = theoreticalMultiplier(threeYearDuration, CURVE)
+
+            const maxLockDuration = await timeLockPool.maxLockDuration();
+            const maxMultiplier = await timeLockPool.getMultiplier(maxLockDuration);
+            const expectedResult5 = theoreticalMultiplier(maxLockDuration, CURVE)
+
+            const randomDuration = Math.floor(MAX_LOCK_DURATION * Math.random());
+            const randomMultiplier = await timeLockPool.getMultiplier(randomDuration);
+            const expectedResult6 = theoreticalMultiplier(randomDuration, CURVE)
+
+            expect(expectedResult1).to.be.eq(minMultiplier)
+            expect(expectedResult2).to.be.eq(oneYearMultiplier)
+            expect(expectedResult3).to.be.eq(twoYearMultiplier)
+            expect(expectedResult4).to.be.eq(threeYearMultiplier)
+            expect(expectedResult5).to.be.eq(maxMultiplier)
+            expect(expectedResult6).to.be.eq(randomMultiplier)
+        });
+
+        it("Change multiplier curve and multiply correctly", async() => {
+            const NEW_CURVE = CURVE.map(function(x) {
+                return (hre.ethers.BigNumber.from(x).mul(2).toString())
+            })
+            timeLockPool.setCurve(NEW_CURVE);
+
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+            const expectedResult1 = theoreticalMultiplier(MIN_LOCK_DURATION, NEW_CURVE)
+
+            const oneYearDuration = MAX_LOCK_DURATION / 4;
+            const oneYearMultiplier = await timeLockPool.getMultiplier(oneYearDuration);
+            const expectedResult2 = theoreticalMultiplier(oneYearDuration, NEW_CURVE)
+
+            const twoYearDuration = MAX_LOCK_DURATION / 2;
+            const twoYearMultiplier = await timeLockPool.getMultiplier(twoYearDuration);
+            const expectedResult3 = theoreticalMultiplier(twoYearDuration, NEW_CURVE)
+
+            const threeYearDuration = MAX_LOCK_DURATION * 3 / 4;
+            const threeYearMultiplier = await timeLockPool.getMultiplier(threeYearDuration);
+            const expectedResult4 = theoreticalMultiplier(threeYearDuration, NEW_CURVE)
+
+            const maxLockDuration = await timeLockPool.maxLockDuration();
+            const maxMultiplier = await timeLockPool.getMultiplier(maxLockDuration);
+            const expectedResult5 = theoreticalMultiplier(maxLockDuration, NEW_CURVE)
+
+            const randomDuration = Math.floor(MAX_LOCK_DURATION * Math.random());
+            const randomMultiplier = await timeLockPool.getMultiplier(randomDuration);
+            const expectedResult6 = theoreticalMultiplier(randomDuration, NEW_CURVE)
+
+            expect(expectedResult1).to.be.eq(minMultiplier)
+            expect(expectedResult2).to.be.eq(oneYearMultiplier)
+            expect(expectedResult3).to.be.eq(twoYearMultiplier)
+            expect(expectedResult4).to.be.eq(threeYearMultiplier)
+            expect(expectedResult5).to.be.eq(maxMultiplier)
+            expect(expectedResult6).to.be.eq(randomMultiplier)
+        });
+
+        it("Change multiplier curve by extending it", async() => {
+            const NEW_RAW_CURVE = [
+                0,
+                0.113450636781733,
+                0.23559102796425,
+                0.367086765506204,
+                0.508654422399196,
+                0.661065457561288,
+                0.825150419825931,
+                1.00180347393553,
+                1.19198727320361,
+                1.39673820539865,
+                1.61717204043653,
+                1.85449001065813,
+                2.10998535682594,
+                2.38505037551144,
+                2.6811840062773,
+                3,
+                3.34323571284532,
+                3.71276157381861,
+                4.11059127748229,
+                4.53889275738489,
+                5
+            ]
+           
+            const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
+                return (x*1e18).toString();
+            })
+            timeLockPool.setCurve(NEW_CURVE);
+
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+            const expectedResult1 = theoreticalMultiplier(MIN_LOCK_DURATION, NEW_CURVE)
+
+            const oneYearDuration = MAX_LOCK_DURATION / 4;
+            const oneYearMultiplier = await timeLockPool.getMultiplier(oneYearDuration);
+            const expectedResult2 = theoreticalMultiplier(oneYearDuration, NEW_CURVE)
+
+            const twoYearDuration = MAX_LOCK_DURATION / 2;
+            const twoYearMultiplier = await timeLockPool.getMultiplier(twoYearDuration);
+            const expectedResult3 = theoreticalMultiplier(twoYearDuration, NEW_CURVE)
+
+            const threeYearDuration = MAX_LOCK_DURATION * 3 / 4;
+            const threeYearMultiplier = await timeLockPool.getMultiplier(threeYearDuration);
+            const expectedResult4 = theoreticalMultiplier(threeYearDuration, NEW_CURVE)
+
+            const maxLockDuration = await timeLockPool.maxLockDuration();
+            const maxMultiplier = await timeLockPool.getMultiplier(maxLockDuration);
+            const expectedResult5 = theoreticalMultiplier(maxLockDuration, NEW_CURVE)
+
+            const randomDuration = Math.floor(MAX_LOCK_DURATION * Math.random());
+            const randomMultiplier = await timeLockPool.getMultiplier(randomDuration);
+            const expectedResult6 = theoreticalMultiplier(randomDuration, NEW_CURVE)
+
+            expect(expectedResult1).to.be.eq(minMultiplier)
+            expect(expectedResult2).to.be.eq(oneYearMultiplier)
+            expect(expectedResult3).to.be.eq(twoYearMultiplier)
+            expect(expectedResult4).to.be.eq(threeYearMultiplier)
+            expect(expectedResult5).to.be.eq(maxMultiplier)
+            expect(expectedResult6).to.be.eq(randomMultiplier)
+        });
+
+        it("Change multiplier curve by reducing it", async() => {
+            const NEW_CURVE = [
+                (0*1e18).toString(),
+                (5*1e18).toString()
+            ]
+            timeLockPool.setCurve(NEW_CURVE);
+
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+            const expectedResult1 = theoreticalMultiplier(MIN_LOCK_DURATION, NEW_CURVE)
+
+            const oneYearDuration = MAX_LOCK_DURATION / 4;
+            const oneYearMultiplier = await timeLockPool.getMultiplier(oneYearDuration);
+            const expectedResult2 = theoreticalMultiplier(oneYearDuration, NEW_CURVE)
+
+            const twoYearDuration = MAX_LOCK_DURATION / 2;
+            const twoYearMultiplier = await timeLockPool.getMultiplier(twoYearDuration);
+            const expectedResult3 = theoreticalMultiplier(twoYearDuration, NEW_CURVE)
+
+            const threeYearDuration = MAX_LOCK_DURATION * 3 / 4;
+            const threeYearMultiplier = await timeLockPool.getMultiplier(threeYearDuration);
+            const expectedResult4 = theoreticalMultiplier(threeYearDuration, NEW_CURVE)
+
+            const maxLockDuration = await timeLockPool.maxLockDuration();
+            const maxMultiplier = await timeLockPool.getMultiplier(maxLockDuration);
+            const expectedResult5 = theoreticalMultiplier(maxLockDuration, NEW_CURVE)
+
+            const randomDuration = Math.floor(MAX_LOCK_DURATION * Math.random());
+            const randomMultiplier = await timeLockPool.getMultiplier(randomDuration);
+            const expectedResult6 = theoreticalMultiplier(randomDuration, NEW_CURVE)
+
+            expect(expectedResult1).to.be.eq(minMultiplier)
+            expect(expectedResult2).to.be.eq(oneYearMultiplier)
+            expect(expectedResult3).to.be.eq(twoYearMultiplier)
+            expect(expectedResult4).to.be.eq(threeYearMultiplier)
+            expect(expectedResult5).to.be.eq(maxMultiplier)
+            expect(expectedResult6).to.be.eq(randomMultiplier)
         });
     });
 });
