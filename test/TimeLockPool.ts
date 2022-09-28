@@ -14,6 +14,14 @@ const ESCROW_PORTION = parseEther("0.77");
 const MAX_BONUS = parseEther("1");
 const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
 const INITIAL_MINT = parseEther("1000000");
+const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
+const CURVE = [
+    (0*1e18).toString(),
+    (0.65*1e18).toString(),
+    (1.5*1e18).toString(),
+    (3*1e18).toString(),
+    (5*1e18).toString()
+]
 
 describe("TimeLockPool", function () {
 
@@ -60,7 +68,8 @@ describe("TimeLockPool", function () {
             0,
             0,
             0,
-            ESCROW_DURATION
+            ESCROW_DURATION,
+            FLAT_CURVE
         );
 
         timeLockPool = await timeLockPoolFactory.deploy(
@@ -72,7 +81,8 @@ describe("TimeLockPool", function () {
             ESCROW_PORTION,
             ESCROW_DURATION,
             MAX_BONUS,
-            MAX_LOCK_DURATION
+            MAX_LOCK_DURATION,
+            CURVE
         );
 
         
@@ -202,7 +212,7 @@ describe("TimeLockPool", function () {
         });
     });
 
-    describe.only("extendLock1", async() => {
+    describe("extendLock1", async() => {
         const DEPOSIT_AMOUNT = parseEther("176.378");
         const THREE_MONTHS = MAX_LOCK_DURATION / 4;
 
@@ -222,7 +232,7 @@ describe("TimeLockPool", function () {
         it("Extending should emit event with the correct arguments", async() => {
             await expect(timeLockPool.extendLock1(0, THREE_MONTHS))
             .to.emit(timeLockPool, "LockExtended")
-            .withArgs(THREE_MONTHS, account1.address);
+            .withArgs(0, THREE_MONTHS, account1.address);
         });
 
         it("Extending should change start and extend end time in the struct", async() => {
@@ -314,7 +324,7 @@ describe("TimeLockPool", function () {
         it("Extending should emit event with the correct arguments", async() => {
             await expect(timeLockPool.extendLock2(0, THREE_MONTHS))
             .to.emit(timeLockPool, "LockExtended")
-            .withArgs(THREE_MONTHS, account1.address);
+            .withArgs(0, THREE_MONTHS, account1.address);
         });
 
         it("Extending should extend the end time in the struct", async() => {

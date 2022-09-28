@@ -14,6 +14,14 @@ const MAX_BONUS = parseEther("1");
 const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
 const INITIAL_MINT = parseEther("1000000");
 const DEPOSIT_AMOUNT = parseEther("1000");
+const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
+const CURVE = [
+    (0*1e18).toString(),
+    (0.65*1e18).toString(),
+    (1.5*1e18).toString(),
+    (3*1e18).toString(),
+    (5*1e18).toString()
+]
 
 describe("TimeLockNonTransferablePool", function () {
 
@@ -60,7 +68,8 @@ describe("TimeLockNonTransferablePool", function () {
             0,
             0,
             0,
-            ESCROW_DURATION
+            ESCROW_DURATION,
+            FLAT_CURVE
         );
 
         timeLockPool = await timeLockPoolFactory.deploy(
@@ -72,7 +81,8 @@ describe("TimeLockNonTransferablePool", function () {
             ESCROW_PORTION,
             ESCROW_DURATION,
             MAX_BONUS,
-            MAX_LOCK_DURATION
+            MAX_LOCK_DURATION,
+            CURVE
         );
 
         
