@@ -464,6 +464,15 @@ describe("TimeLockPool", function () {
             return result.toString()
         }
 
+        it("Replacing a curve should emit an event", async() => {
+            const NEW_CURVE = CURVE.map(function(x) {
+                return (hre.ethers.BigNumber.from(x).mul(2).toString())
+            })
+            await expect(timeLockPool.setCurve(NEW_CURVE))            
+                .to.emit(timeLockPool, "CurveChanged")
+                .withArgs(account1.address);
+        })
+
         it("Replacing with a same length curve should do it correctly", async() => {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
@@ -525,14 +534,47 @@ describe("TimeLockPool", function () {
             await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
         })
 
-        it("Replacing a curve should emit an event", async() => {
-            const NEW_CURVE = CURVE.map(function(x) {
-                return (hre.ethers.BigNumber.from(x).mul(2).toString())
-            })
-            await expect(timeLockPool.setCurve(NEW_CURVE))            
+        it("Replacing a point should emit an event", async() => {
+            await expect(timeLockPool.setCurvePoint((4*1e18).toString(), 3))            
                 .to.emit(timeLockPool, "CurveChanged")
                 .withArgs(account1.address);
         })
+
+        it("Replacing a point should do it correctly", async() => {
+            const curvePoint = await timeLockPool.curve(3);
+            
+            const newPoint = (4*1e18).toString();
+            await timeLockPool.setCurvePoint(newPoint, 3);
+
+            const changedCurvePoint = await timeLockPool.curve(3);
+            expect(curvePoint).not.to.be.eq(changedCurvePoint)
+            expect(changedCurvePoint).to.be.eq(newPoint)
+        })
+
+        it("Adding a point should do it correctly", async() => {
+            await expect(timeLockPool.curve(5)).to.be.reverted;
+            const newPoint = (4*1e18).toString();
+            await timeLockPool.setCurvePoint(newPoint, 5);
+            
+            const addedCurvePoint = await timeLockPool.curve(5);
+            expect(addedCurvePoint).to.be.eq(newPoint)
+        })
+
+        it("Removing a point should do it correctly", async() => {
+            const newPoint = (4*1e18).toString();
+            await timeLockPool.setCurvePoint(newPoint, 6);
+            
+            await expect(timeLockPool.curve(4)).to.be.reverted;
+        })
+
+        it("Removing a point from a curve with length two should revert", async() => {
+            const NEW_CURVE = [(1e18).toString(), (2*1e18).toString()]
+            await timeLockPool.setCurve(NEW_CURVE);
+
+            const newPoint = (4*1e18).toString();
+            await expect(timeLockPool.setCurvePoint(newPoint, 9)).to.be.revertedWith("ShortCurveError()");            
+        })
+
 
         it("Multiply correctly", async() => {
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
