@@ -89,15 +89,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
         require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
 
-        //                      No risk of wrapping around on casting to uint256 since deposit end always > deposit start and types are 64 bits
-        uint256 shareAmount = userDeposit.amount * getMultiplier(uint256(userDeposit.end - userDeposit.start)) / 1e18;
-
         // remove Deposit
         depositsOf[_msgSender()][_depositId] = depositsOf[_msgSender()][depositsOf[_msgSender()].length - 1];
         depositsOf[_msgSender()].pop();
 
         // burn pool shares
-        _burn(_msgSender(), shareAmount);
+        _burn(_msgSender(), userDeposit.shareAmount);
         
         // return tokens
         depositToken.safeTransfer(_receiver, userDeposit.amount);
@@ -207,6 +204,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
+        // There is no need to check _lockDuration amount, it is always checked before
+        // in the functions that call this function
+
         // n is the time unit where the lockDuration stands
         uint n = _lockDuration / unit;
         // if last point no need to interpolate
