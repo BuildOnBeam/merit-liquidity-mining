@@ -39,7 +39,7 @@ describe("TokenSaver", function () {
 
     describe("saveToken", async() => {
         it("Should fail when called fron non whitelised address", async() => {
-            await expect(tokenSaver.saveToken(token.address, account1.address, INITIAL_MINT)).to.be.revertedWith("TokenSaver.onlyTokenSaver: permission denied");
+            await expect(tokenSaver.saveToken(token.address, account1.address, INITIAL_MINT)).to.be.revertedWith("NotTokenSaverError()");
         });
         it("Should work", async() => {
             const TOKEN_SAVER_ROLE = await tokenSaver.TOKEN_SAVER_ROLE();

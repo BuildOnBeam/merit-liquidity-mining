@@ -235,8 +235,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         return depositsOf[_account].length;
     }
 
-    function setCurve(uint256[] calldata _curve) external {
-        // TODO Add checks: permission (Gov role) and data validation
+    function setCurve(uint256[] calldata _curve) external onlyGov {
         if (_curve.length < 2) {
             revert ShortCurveError();
         }
@@ -269,9 +268,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit CurveChanged(_msgSender());
     }
 
-    function setCurvePoint(uint256 _newPoint, uint256 _position) external {
-        // TODO Add some checks: permission (Gov role) and data validation
-
+    function setCurvePoint(uint256 _newPoint, uint256 _position) external onlyGov {
         if (_position < curve.length) {
             curve[_position] = _newPoint;
         } else if (_position == curve.length) {

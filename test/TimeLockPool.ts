@@ -122,8 +122,10 @@ describe("TimeLockPool", function () {
             MAX_LOCK_DURATION,
             CURVE
         );
-
         
+        const GOV_ROLE = await timeLockPool.GOV_ROLE();
+        await timeLockPool.grantRole(GOV_ROLE, deployer.address);
+
         // connect account1 to all contracts
         timeLockPool = timeLockPool.connect(account1);
         escrowPool = escrowPool.connect(account1);
@@ -485,7 +487,7 @@ describe("TimeLockPool", function () {
 
         it("A multiplier exceeding maxBonus should be capped to maxBonus value", async() => {
             const point = (30*1e18).toString();
-            await timeLockPool.setCurvePoint(point, 4);
+            await timeLockPool.connect(deployer).setCurvePoint(point, 4);
             let CHANGED_CURVE = [];
             CHANGED_CURVE.push(...CURVE);
             CHANGED_CURVE[CHANGED_CURVE.length - 1] = point;
@@ -496,20 +498,27 @@ describe("TimeLockPool", function () {
     });
 
     describe("setCurve and setCurvePoint", async() => {
+        it("Replacing a curve with a non gov role account should fail", async() => {
+            const NEW_CURVE = CURVE.map(function(x) {
+                return (hre.ethers.BigNumber.from(x).mul(2).toString())
+            })
+            await expect(timeLockPool.setCurve(NEW_CURVE)).to.be.revertedWith("NotGovError()");
+        });
+
         it("Replacing a curve should emit an event", async() => {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await expect(timeLockPool.setCurve(NEW_CURVE))            
+            await expect(timeLockPool.connect(deployer).setCurve(NEW_CURVE))            
                 .to.emit(timeLockPool, "CurveChanged")
-                .withArgs(account1.address);
+                .withArgs(deployer.address);
         })
 
         it("Replacing with a same length curve should do it correctly", async() => {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             for(let i=0; i< NEW_CURVE.length; i++){
                 const curvePoint = await timeLockPool.curve(i);
@@ -520,7 +529,7 @@ describe("TimeLockPool", function () {
 
         it("Replacing with a shorter curve should do it correctly", async() => {
             const NEW_CURVE = [(1e18).toString(), (2*1e18).toString()]
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             for(let i=0; i< NEW_CURVE.length; i++){
                 const curvePoint = await timeLockPool.curve(i);
@@ -557,7 +566,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
                 return (x*1e18).toString();
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             for(let i=0; i< NEW_CURVE.length; i++){
                 const curvePoint = await timeLockPool.curve(i);
@@ -566,17 +575,21 @@ describe("TimeLockPool", function () {
             await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
         })
 
+        it("Replacing a point with a non gov role account should fail", async() => {
+            await expect(timeLockPool.setCurvePoint((4*1e18).toString(), 3)).to.be.revertedWith("NotGovError()");
+        });
+
         it("Replacing a point should emit an event", async() => {
-            await expect(timeLockPool.setCurvePoint((4*1e18).toString(), 3))            
+            await expect(timeLockPool.connect(deployer).setCurvePoint((4*1e18).toString(), 3))            
                 .to.emit(timeLockPool, "CurveChanged")
-                .withArgs(account1.address);
+                .withArgs(deployer.address);
         })
 
         it("Replacing a point should do it correctly", async() => {
-            const curvePoint = await timeLockPool.curve(3);
+            const curvePoint = await timeLockPool.connect(deployer).curve(3);
             
             const newPoint = (4*1e18).toString();
-            await timeLockPool.setCurvePoint(newPoint, 3);
+            await timeLockPool.connect(deployer).setCurvePoint(newPoint, 3);
 
             const changedCurvePoint = await timeLockPool.curve(3);
             expect(curvePoint).not.to.be.eq(changedCurvePoint)
@@ -584,9 +597,9 @@ describe("TimeLockPool", function () {
         })
 
         it("Adding a point should do it correctly", async() => {
-            await expect(timeLockPool.curve(5)).to.be.reverted;
+            await expect(timeLockPool.connect(deployer).curve(5)).to.be.reverted;
             const newPoint = (4*1e18).toString();
-            await timeLockPool.setCurvePoint(newPoint, 5);
+            await timeLockPool.connect(deployer).setCurvePoint(newPoint, 5);
             
             const addedCurvePoint = await timeLockPool.curve(5);
             expect(addedCurvePoint).to.be.eq(newPoint)
@@ -594,17 +607,17 @@ describe("TimeLockPool", function () {
 
         it("Removing a point should do it correctly", async() => {
             const newPoint = (4*1e18).toString();
-            await timeLockPool.setCurvePoint(newPoint, 6);
+            await timeLockPool.connect(deployer).setCurvePoint(newPoint, 6);
             
             await expect(timeLockPool.curve(4)).to.be.reverted;
         })
 
         it("Removing a point from a curve with length two should revert", async() => {
             const NEW_CURVE = [(1e18).toString(), (2*1e18).toString()]
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const newPoint = (4*1e18).toString();
-            await expect(timeLockPool.setCurvePoint(newPoint, 9)).to.be.revertedWith("ShortCurveError()");            
+            await expect(timeLockPool.connect(deployer).setCurvePoint(newPoint, 9)).to.be.revertedWith("ShortCurveError()");            
         })
     });    
 
@@ -650,7 +663,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
             const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
@@ -712,7 +725,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
                 return (x*1e18).toString();
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
             const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
@@ -751,7 +764,7 @@ describe("TimeLockPool", function () {
                 (0*1e18).toString(),
                 (5*1e18).toString()
             ]
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
             const minMultiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
@@ -800,7 +813,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             await timeTraveler.increaseTime(MAX_LOCK_DURATION);
             await timeLockPool.withdraw(0, account3.address);
@@ -818,7 +831,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
             const startBalance = await timeLockPool.balanceOf(account1.address);
@@ -846,7 +859,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).div(10).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
             
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
             const startBalance = await timeLockPool.balanceOf(account1.address);
@@ -876,7 +889,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).mul(2).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
 
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
             const startBalance = await timeLockPool.balanceOf(account1.address);
@@ -899,7 +912,7 @@ describe("TimeLockPool", function () {
             const NEW_CURVE = CURVE.map(function(x) {
                 return (hre.ethers.BigNumber.from(x).div(10).toString())
             })
-            await timeLockPool.setCurve(NEW_CURVE);
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
             
 
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);

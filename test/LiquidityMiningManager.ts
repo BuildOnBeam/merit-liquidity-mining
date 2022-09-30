@@ -154,7 +154,7 @@ describe("LiquidityMiningManager", function () {
         });
 
         it("Adding a pool from a non gov address should fail", async() => {
-            await expect(liquidityMiningManager.connect(account2).addPool(pools[0].address, 0)).to.be.revertedWith("LiquidityMiningManager.onlyGov: permission denied");
+            await expect(liquidityMiningManager.connect(account2).addPool(pools[0].address, 0)).to.be.revertedWith("NotGovError()");
         });
     });
 
@@ -239,7 +239,7 @@ describe("LiquidityMiningManager", function () {
         })
 
         it("Removing a pool from a non gov address should fail", async() => {
-            await expect(liquidityMiningManager.connect(account2).removePool(0)).to.be.revertedWith("LiquidityMiningManager.onlyGov: permission denied");
+            await expect(liquidityMiningManager.connect(account2).removePool(0)).to.be.revertedWith("NotGovError()");
         });
     });
 
@@ -356,7 +356,7 @@ describe("LiquidityMiningManager", function () {
         });
 
         it("Should fail from non gov address", async() => {
-            await expect(liquidityMiningManager.connect(account2).adjustWeight(0, 0)).to.be.revertedWith("LiquidityMiningManager.onlyGov: permission denied");
+            await expect(liquidityMiningManager.connect(account2).adjustWeight(0, 0)).to.be.revertedWith("NotGovError()");
         });
 
     });
@@ -376,7 +376,7 @@ describe("LiquidityMiningManager", function () {
         });
 
         it("Should fail from non gov address", async() => {
-            await expect(liquidityMiningManager.connect(account2).setRewardPerSecond(0)).to.be.revertedWith("LiquidityMiningManager.onlyGov: permission denied");
+            await expect(liquidityMiningManager.connect(account2).setRewardPerSecond(0)).to.be.revertedWith("NotGovError()");
         });
     });
 
