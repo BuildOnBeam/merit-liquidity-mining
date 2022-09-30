@@ -932,4 +932,149 @@ describe("TimeLockPool", function () {
             expect(theoreticalEndShareAmount1).to.be.eq(theoreticalEndShareAmount2).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
         });
     });
+
+    describe("Batchable", async() => {
+        it("User should make multiple deposits on the same transaction", async() => {
+            const DEPOSIT_AMOUNT = parseEther("10");
+            const calldatas: any[] = [];
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT, constants.MaxUint256, account1.address)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT.mul(2), constants.MaxUint256, account1.address)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT.mul(3), constants.MaxUint256, account1.address)).data
+            );
+
+            const depositTokenBalanceBefore = await depositToken.balanceOf(account1.address);
+
+            await timeLockPool.batch(calldatas, true);
+            const blockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+
+            const depositTokenBalanceAfter = await depositToken.balanceOf(account1.address);
+
+            const deposits = await timeLockPool.getDepositsOf(account1.address);
+            const totalDeposit = await timeLockPool.getTotalDeposit(account1.address);
+            const timeLockPoolBalance = await timeLockPool.balanceOf(account1.address);
+            const multiplier = await timeLockPool.getMultiplier(MAX_LOCK_DURATION);
+
+            expect(deposits[0].amount).to.eq(DEPOSIT_AMOUNT);
+            expect(deposits[0].start).to.eq(blockTimestamp);
+            expect(deposits[0].end).to.eq(BigNumber.from(blockTimestamp).add(MAX_LOCK_DURATION));
+
+            expect(deposits[1].amount).to.eq(DEPOSIT_AMOUNT.mul(2));
+            expect(deposits[1].start).to.eq(blockTimestamp);
+            expect(deposits[1].end).to.eq(BigNumber.from(blockTimestamp).add(MAX_LOCK_DURATION));
+
+            expect(deposits[2].amount).to.eq(DEPOSIT_AMOUNT.mul(3));
+            expect(deposits[2].start).to.eq(blockTimestamp);
+            expect(deposits[2].end).to.eq(BigNumber.from(blockTimestamp).add(MAX_LOCK_DURATION));
+
+            expect(deposits.length).to.eq(3);
+            expect(totalDeposit).to.eq(DEPOSIT_AMOUNT.mul(6));
+            expect(timeLockPoolBalance).to.eq(DEPOSIT_AMOUNT.mul(6).mul(multiplier).div(constants.WeiPerEther));
+
+            expect(depositTokenBalanceAfter).to.eq(depositTokenBalanceBefore.sub(DEPOSIT_AMOUNT.mul(6)));
+        });
+
+        it("User should be able to withdraw and deposit in the same transaction", async() => {
+            const DEPOSIT_AMOUNT = parseEther("10");
+            const multiplier = await timeLockPool.getMultiplier(MAX_LOCK_DURATION);
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, constants.MaxUint256, account1.address);
+            const startingDepositBalance = await timeLockPool.balanceOf(account1.address);
+            const blockTimestamp1 = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            const deposit = await timeLockPool.getDepositsOf(account1.address);
+            expect(startingDepositBalance).to.be.eq(DEPOSIT_AMOUNT.mul(multiplier).div(constants.WeiPerEther));
+            
+            expect(deposit[0].amount).to.eq(DEPOSIT_AMOUNT);
+            expect(deposit[0].start).to.eq(blockTimestamp1);
+            expect(deposit[0].end).to.eq(BigNumber.from(blockTimestamp1).add(MAX_LOCK_DURATION));
+            
+            await timeTraveler.increaseTime(MAX_LOCK_DURATION);
+
+            const calldatas: any[] = [];
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.withdraw(0, account1.address)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT.div(2), constants.MaxUint256, account1.address)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT.div(4), MAX_LOCK_DURATION / 2, account1.address)).data
+            );
+
+            const depositTokenBalanceBefore = await depositToken.balanceOf(account1.address);
+
+            await timeLockPool.batch(calldatas, true);
+            const blockTimestamp2 = (await hre.ethers.provider.getBlock("latest")).timestamp;
+
+            const depositTokenBalanceAfter = await depositToken.balanceOf(account1.address);
+
+            const deposits = await timeLockPool.getDepositsOf(account1.address);
+            const totalDeposit = await timeLockPool.getTotalDeposit(account1.address);
+            const timeLockPoolBalance = await timeLockPool.balanceOf(account1.address);
+            const multiplier1 = await timeLockPool.getMultiplier(MAX_LOCK_DURATION);
+            const multiplier2 = await timeLockPool.getMultiplier(MAX_LOCK_DURATION / 2);
+
+            expect(deposits[0].amount).to.eq(DEPOSIT_AMOUNT.div(2));
+            expect(deposits[0].start).to.eq(blockTimestamp2);
+            expect(deposits[0].end).to.eq(BigNumber.from(blockTimestamp2).add(MAX_LOCK_DURATION));
+
+            expect(deposits[1].amount).to.eq(DEPOSIT_AMOUNT.div(4));
+            expect(deposits[1].start).to.eq(blockTimestamp2);
+            expect(deposits[1].end).to.eq(BigNumber.from(blockTimestamp2).add(MAX_LOCK_DURATION / 2));
+
+            expect(deposits.length).to.eq(2);
+            expect(totalDeposit).to.eq(DEPOSIT_AMOUNT.mul(3).div(4));
+            expect(timeLockPoolBalance).to.eq(DEPOSIT_AMOUNT.div(2).mul(multiplier1).div(constants.WeiPerEther).add(DEPOSIT_AMOUNT.div(4).mul(multiplier2).div(constants.WeiPerEther)));
+
+            expect(depositTokenBalanceAfter).to.eq(depositTokenBalanceBefore.sub(DEPOSIT_AMOUNT.div(4).mul(3)).add(DEPOSIT_AMOUNT));
+        });
+
+        it("User should be able to increase and extend lock in the same transaction", async() => {
+            const startTokenBalance = await depositToken.balanceOf(account1.address);
+            const DEPOSIT_AMOUNT = parseEther("10");
+            const INCREASE_AMOUNT = DEPOSIT_AMOUNT.div(2);
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, MAX_LOCK_DURATION / 4, account1.address);
+            //const blockTimestamp1 = (await hre.ethers.provider.getBlock("latest")).timestamp;
+
+            const startingDeposit = await timeLockPool.getDepositsOf(account1.address);
+
+            const calldatas: any[] = [];
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.increaseLock(0, account1.address, INCREASE_AMOUNT)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.extendLock1(0, MAX_LOCK_DURATION / 2)).data
+            );
+
+            await timeTraveler.increaseTime(MAX_LOCK_DURATION / 12);
+
+            await timeLockPool.batch(calldatas, true);
+            const blockTimestamp2 = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            const deposits = await timeLockPool.getDepositsOf(account1.address);
+            const totalDeposit = await timeLockPool.getTotalDeposit(account1.address);
+            const balance = await timeLockPool.balanceOf(account1.address);
+            const endTokenBalance = await depositToken.balanceOf(account1.address);
+
+            expect(deposits[0].start).to.be.eq(blockTimestamp2);
+            expect(deposits[0].end.sub(deposits[0].start)).to.be.eq(startingDeposit[0].end.sub(blockTimestamp2).add(MAX_LOCK_DURATION / 2));
+
+            const multiplier = await timeLockPool.getMultiplier(deposits[0].end.sub(deposits[0].start));
+            expect(balance).to.be.eq(DEPOSIT_AMOUNT.add(INCREASE_AMOUNT).mul(multiplier).div(constants.WeiPerEther));
+            expect(totalDeposit).to.be.eq(startTokenBalance.sub(endTokenBalance));
+        });
+        it("Test for curve setting in batches", async() => {
+            expect("TODO").to.be.eq("DONE");
+        });
+    });
 });
