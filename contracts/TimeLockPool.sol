@@ -101,6 +101,15 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit Withdrawn(_depositId, _receiver, _msgSender(), userDeposit.amount);
     }
 
+    /**
+     * @notice Adds more time to current lock.
+     * @dev This function extends the duration of a specific lock -deposit- of the sender.
+     * While doing so, it uses the timestamp of the current block and calculates the remaining
+     * time to the end of the lock, and adds the increase duration. This results is a new
+     * duration that can be different to the original duration from the lock one (>, = or <), 
+     * and gets multiplied by the correspondant multiplier. The final result can be more, same,
+     * or less shares, which will be minted/burned accordingly.
+     */
     function extendLock(uint256 _depositId, uint256 _increaseDuration) external {
         // Check if actually increasing
         if (_increaseDuration == 0) {
@@ -139,6 +148,14 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit LockExtended(_depositId, _increaseDuration, _msgSender());
     }
 
+    /**
+     * @notice Adds more deposits to current lock.
+     * @dev This function increases the deposit amount of a specific lock -deposit- of the sender.
+     * While doing so, it uses the timestamp of the current block and calculates the remaining
+     * time to the end of the lock. Then it uses this time duration to mint the shares that correspond
+     * to the multiplier of that time and the increase amount being deposited. The result is an increase
+     * both in deposit amount and share amount of the deposit.
+     */
     function increaseLock(uint256 _depositId, address _receiver, uint256 _increaseAmount) external {
         // Check if actually increasing
         if (_increaseAmount == 0) {
@@ -166,6 +183,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit LockIncreased(_depositId, _receiver, _msgSender(), _increaseAmount);
     }
 
+    /**
+     * @notice Gets the multiplier from the curve given a duration.
+     * @dev This function calculates a multiplier by fetching the points in the curve given a duration.
+     * It can achieve this by linearly interpolating between the points of the curve to get a much more
+     * precise result. The unit parameter is related to the maximum possible duration of the deposits 
+     * and the amount of points in the curve.
+     */
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
         // There is no need to check _lockDuration amount, it is always checked before
         // in the functions that call this function
@@ -198,6 +222,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         return depositsOf[_account].length;
     }
 
+    /**
+     * @notice Can set an entire new curve.
+     * @dev This function can change current curve by a completely new. For doing so, it does not
+     * matter if the new curve's length is larger, equal, or shorter because the function manages
+     * all of those cases.
+     */
     function setCurve(uint256[] calldata _curve) external onlyGov {
         if (_curve.length < 2) {
             revert ShortCurveError();
@@ -231,6 +261,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit CurveChanged(_msgSender());
     }
 
+    /**
+     * @notice Can set a point of the curve.
+     * @dev This function can replace any point in the curve by inputing the existing index,
+     * add a point to the curve by using the index that equals the amount of points of the curve,
+     * and remove the last point of the curve if an index greated than the length is used. The first
+     * point of the curve index is zero.
+     */
     function setCurvePoint(uint256 _newPoint, uint256 _position) external onlyGov {
         if (_position < curve.length) {
             curve[_position] = _newPoint;
