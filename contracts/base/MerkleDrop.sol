@@ -43,6 +43,12 @@ contract MerkleDrop is AccessControlEnumerable {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
     
+    /**
+     * @notice Sets the root for claims
+     * @param _dropId uint256 id of the drop to be set
+     * @param _merkleRoot bytes32 merkle root to be set
+     * @param _ipfsHash string ipfs identifier where merkle tree data can be stored
+     */
     function setMerkleRoot(
         uint256 _dropId,
         bytes32 _merkleRoot,
@@ -52,10 +58,30 @@ contract MerkleDrop is AccessControlEnumerable {
         emit MerkleRootUpdated(_dropId, _merkleRoot, _ipfsHash);
     }
 
+    /**
+     * @notice Returns the root from a given drop
+     * @dev This function calculates a multiplier by fetching the points in the curve given a duration.
+     * It can achieve this by linearly interpolating between the points of the curve to get a much more
+     * precise result. The unit parameter is related to the maximum possible duration of the deposits 
+     * and the amount of points in the curve.
+     * @param _dropId uint256 id of the drop
+     * @return bytes32 merkle root of a specific drop.
+     */
     function getMerkleRoot(uint256 _dropId) public view returns (bytes32) {
         return drops[_dropId].merkleRoot;
     }
 
+    /**
+     * @notice Drop claiming
+     * @dev This functions distributes the drop token to the claimer if the 
+     * receiver of the drop has not already claimed and if he provides the proof
+     * that he belongs to the merkle tree.
+     * @param _dropId uint256 id of the drop to be claimed
+     * @param _receiver address receiver of the tokens
+     * @param _token address token of the drop
+     * @param _amount uint256 amount of the drop
+     * @param _proof bytes32[] path of the merkle tree to corroborate the proof
+     */
     function claimDrop(
         uint256 _dropId,
         address _receiver,
@@ -89,6 +115,10 @@ contract MerkleDrop is AccessControlEnumerable {
         emit TokenClaimed(_dropId, _receiver, _token);
     }
 
+    /**
+     * @notice Send ETH to the contract
+     * @dev Only participants with reward distributor role can use this function
+     */
     function fundWithETH() external payable onlyRewardDistributor {
         if (msg.value == 0) {
             revert ZeroFundingError();

@@ -34,6 +34,12 @@ contract TokenSaver is AccessControlEnumerable {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
+    /**
+     * @notice Send tokens that were sent by error to this contract
+     * @param _token address token to be transferred
+     * @param _receiver address receiver of the tokens
+     * @param _amount uint256 amount of tokens to be transferred
+     */
     function saveToken(address _token, address _receiver, uint256 _amount) external onlyTokenSaver {
         IERC20(_token).safeTransfer(_receiver, _amount);
         emit TokenSaved(_msgSender(), _receiver, _token, _amount);

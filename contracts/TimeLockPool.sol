@@ -62,6 +62,15 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     event LockIncreased(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
     event CurveChanged(address indexed sender);
 
+    /**
+     * @notice Creates a lock with an amount of tokens and mint the corresponding shares.
+     * @dev The function forces the duration to be in between the minimum and maximum
+     * duration if it the duration parameter is outside of those bounds. Uses the multiplier
+     * function to get the amount of shares to mint.
+     * @param _amount uint256 amount of tokens to be deposited
+     * @param _duration uint256 time that the deposit will be locked.
+     * @param _receiver uint256 owner of the lock
+     */
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         require(_amount > 0, "TimeLockPool.deposit: cannot deposit 0");
         // Don't allow locking > maxLockDuration
@@ -84,6 +93,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         emit Deposited(_amount, duration, _receiver, _msgSender());
     }
 
+    /**
+     * @notice Withdraws all the tokens from the lock
+     * @dev The lock has to be expired to withdraw the tokens. When the withdrawl happens
+     * the shares minted on the deposit are burnt.
+     * @param _depositId uint256 id of the deposit to be increased.
+     * @param _receiver uint256 owner of the lock
+     */
     function withdraw(uint256 _depositId, address _receiver) external {
         require(_depositId < depositsOf[_msgSender()].length, "TimeLockPool.withdraw: Deposit does not exist");
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
@@ -109,6 +125,8 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * duration that can be different to the original duration from the lock one (>, = or <), 
      * and gets multiplied by the correspondant multiplier. The final result can be more, same,
      * or less shares, which will be minted/burned accordingly.
+     * @param _depositId uint256 id of the deposit to be increased.
+     * @param _increaseDuration uint256 time to be added to the lock meassured from the end of the lock
      */
     function extendLock(uint256 _depositId, uint256 _increaseDuration) external {
         // Check if actually increasing
@@ -155,6 +173,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * time to the end of the lock. Then it uses this time duration to mint the shares that correspond
      * to the multiplier of that time and the increase amount being deposited. The result is an increase
      * both in deposit amount and share amount of the deposit.
+     * @param _depositId uint256 id of the deposit to be increased.
+     * @param _receiver address owner of the lock
+     * @param _increaseAmount uint256 amount of tokens to add to the lock.
      */
     function increaseLock(uint256 _depositId, address _receiver, uint256 _increaseAmount) external {
         // Check if actually increasing
@@ -189,6 +210,8 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * It can achieve this by linearly interpolating between the points of the curve to get a much more
      * precise result. The unit parameter is related to the maximum possible duration of the deposits 
      * and the amount of points in the curve.
+     * @param _lockDuration uint256 time that the deposit will be locked.
+     * @return uint256 number used to multiply and get amount of shares.
      */
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
         // There is no need to check _lockDuration amount, it is always checked before
@@ -227,6 +250,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @dev This function can change current curve by a completely new. For doing so, it does not
      * matter if the new curve's length is larger, equal, or shorter because the function manages
      * all of those cases.
+     * @param _curve uint256 array of the points that compose the curve.
      */
     function setCurve(uint256[] calldata _curve) external onlyGov {
         if (_curve.length < 2) {
@@ -267,6 +291,8 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * add a point to the curve by using the index that equals the amount of points of the curve,
      * and remove the last point of the curve if an index greated than the length is used. The first
      * point of the curve index is zero.
+     * @param _newPoint uint256 point to be set.
+     * @param _position uint256 position of the array to be set (zero-based indexing convention).
      */
     function setCurvePoint(uint256 _newPoint, uint256 _position) external onlyGov {
         if (_position < curve.length) {
