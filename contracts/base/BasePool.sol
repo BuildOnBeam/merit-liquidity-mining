@@ -11,9 +11,10 @@ import "../interfaces/ITimeLockPool.sol";
 
 import "./AbstractRewards.sol";
 import "./TokenSaver.sol";
+import "./MerkleDrop.sol";
 import "./BoringBatchable.sol";
 
-abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver, BaseBoringBatchable {
+abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver, MerkleDrop, BaseBoringBatchable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
