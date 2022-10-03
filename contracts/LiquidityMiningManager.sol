@@ -9,7 +9,6 @@ import "./base/TokenSaver.sol";
 contract LiquidityMiningManager is TokenSaver {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
     uint256 public MAX_POOL_COUNT = 10;
 
@@ -25,11 +24,6 @@ contract LiquidityMiningManager is TokenSaver {
     struct Pool {
         IBasePool poolContract;
         uint256 weight;
-    }
-
-    modifier onlyGov {
-        require(hasRole(GOV_ROLE, _msgSender()), "LiquidityMiningManager.onlyGov: permission denied");
-        _;
     }
 
     modifier onlyRewardDistributor {

@@ -18,6 +18,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     uint256 public immutable maxLockDuration;
     uint256 public constant MIN_LOCK_DURATION = 10 minutes;
     
+    uint256[] public curve;
+    uint256 public unit;
+
     mapping(address => Deposit[]) public depositsOf;
 
     struct Deposit {
@@ -35,21 +38,29 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _escrowPortion,
         uint256 _escrowDuration,
         uint256 _maxBonus,
-        uint256 _maxLockDuration
+        uint256 _maxLockDuration,
+        uint256[] memory _curve
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
         require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        curve = _curve;
+        unit = _maxLockDuration / (curve.length - 1);
     }
 
     error DepositExpiredError();
     error ZeroDurationError();
     error ZeroAmountError();
+    error ShortCurveError();
 
     event Deposited(uint256 amount, uint256 duration, address indexed receiver, address indexed from);
     event Withdrawn(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
-    event LockExtended(uint256 duration, address indexed from);
+    event LockExtended(uint256 indexed depositId, uint256 duration, address indexed from);
     event LockIncreased(uint256 indexed depositId, address indexed receiver, address indexed from, uint256 amount);
+    event CurveChanged(address indexed sender);
 
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         require(_amount > 0, "TimeLockPool.deposit: cannot deposit 0");
@@ -78,15 +89,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
         require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
 
-        //                      No risk of wrapping around on casting to uint256 since deposit end always > deposit start and types are 64 bits
-        uint256 shareAmount = userDeposit.amount * getMultiplier(uint256(userDeposit.end - userDeposit.start)) / 1e18;
-
         // remove Deposit
         depositsOf[_msgSender()][_depositId] = depositsOf[_msgSender()][depositsOf[_msgSender()].length - 1];
         depositsOf[_msgSender()].pop();
 
         // burn pool shares
-        _burn(_msgSender(), shareAmount);
+        _burn(_msgSender(), userDeposit.shareAmount);
         
         // return tokens
         depositToken.safeTransfer(_receiver, userDeposit.amount);
@@ -128,7 +136,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         depositsOf[_msgSender()][_depositId].start = uint64(block.timestamp);
         depositsOf[_msgSender()][_depositId].end = uint64(block.timestamp) + uint64(duration);
-        emit LockExtended(_increaseDuration, _msgSender());
+        emit LockExtended(_depositId, _increaseDuration, _msgSender());
     }
 
     function increaseLock(uint256 _depositId, address _receiver, uint256 _increaseAmount) external {
@@ -159,8 +167,18 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     }
 
     function getMultiplier(uint256 _lockDuration) public view returns(uint256) {
-        //return 1e18;
-        return 1e18 + (maxBonus * _lockDuration / maxLockDuration);
+        // There is no need to check _lockDuration amount, it is always checked before
+        // in the functions that call this function
+
+        // n is the time unit where the lockDuration stands
+        uint n = _lockDuration / unit;
+        // if last point no need to interpolate
+        // trim de curve if it exceedes the maxBonus // TODO check if this is needed
+        if (n == curve.length - 1) {
+            return 1e18 + maxBonus.min(curve[n]);
+        }
+        // linear interpolation between points
+        return 1e18 + maxBonus.min(curve[n] + (_lockDuration - n * unit) * (curve[n + 1] - curve[n]) / unit);
     }
 
     function getTotalDeposit(address _account) public view returns(uint256) {
@@ -178,5 +196,52 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     function getDepositsOfLength(address _account) public view returns(uint256) {
         return depositsOf[_account].length;
+    }
+
+    function setCurve(uint256[] calldata _curve) external onlyGov {
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        // same length curves
+        if (curve.length == _curve.length) {
+            for (uint i=0; i < curve.length; i++) {
+                curve[i] = _curve[i];
+            }
+        // replacing with a shorter curve
+        } else if (curve.length > _curve.length) {
+            for (uint i=0; i < _curve.length; i++) {
+                curve[i] = _curve[i];
+            }
+            uint initialLength = curve.length;
+            for (uint j=0; j < initialLength - _curve.length; j++) {
+                curve.pop();
+            }
+            unit = maxLockDuration / (curve.length - 1);
+        // replacing with a longer curve
+        } else {
+            for (uint i=0; i < curve.length; i++) {
+                curve[i] = _curve[i];
+            }
+            uint initialLength = curve.length;
+            for (uint j=0; j < _curve.length - initialLength; j++) {
+                curve.push(_curve[initialLength + j]);
+            }
+            unit = maxLockDuration / (curve.length - 1);
+        }
+        emit CurveChanged(_msgSender());
+    }
+
+    function setCurvePoint(uint256 _newPoint, uint256 _position) external onlyGov {
+        if (_position < curve.length) {
+            curve[_position] = _newPoint;
+        } else if (_position == curve.length) {
+            curve.push(_newPoint);
+        } else {
+            if (curve.length - 1 < 2) {
+                revert ShortCurveError();
+            }
+            curve.pop();
+        }
+        emit CurveChanged(_msgSender());
     }
 }
