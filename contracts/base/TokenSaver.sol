@@ -8,12 +8,25 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 contract TokenSaver is AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
+    error NotTokenSaverError();
+    error NotGovError();
+
     bytes32 public constant TOKEN_SAVER_ROLE = keccak256("TOKEN_SAVER_ROLE");
+    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
 
     event TokenSaved(address indexed by, address indexed receiver, address indexed token, uint256 amount);
 
     modifier onlyTokenSaver() {
-        require(hasRole(TOKEN_SAVER_ROLE, _msgSender()), "TokenSaver.onlyTokenSaver: permission denied");
+        if (!hasRole(TOKEN_SAVER_ROLE, _msgSender())) {
+            revert NotTokenSaverError();
+        }
+        _;
+    }
+
+    modifier onlyGov() {
+        if (!hasRole(GOV_ROLE, _msgSender())) {
+            revert NotGovError();
+        }
         _;
     }
 

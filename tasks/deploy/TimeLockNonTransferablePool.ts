@@ -15,6 +15,7 @@ task("deploy-time-lock-non-transferable-pool")
     .addParam("escrowDuration", "How long tokens will be escrowed")
     .addParam("maxBonus", "Maximum bonus for locking longer, 1 == 100% bonus")
     .addParam("maxLockDuration", "After how long the bonus is maxed out, in seconds")
+    .addParam("curve", "Points in the curve used to get the multiplier bonus")
     .addFlag("verify")
     .setAction(async(taskArgs, { ethers, run }) => {
         const signers = await ethers.getSigners();
@@ -29,7 +30,8 @@ task("deploy-time-lock-non-transferable-pool")
             parseEther(taskArgs.escrowPortion),
             taskArgs.escrowDuration,
             parseEther(taskArgs.maxBonus),
-            taskArgs.maxLockDuration
+            taskArgs.maxLockDuration,
+            taskArgs.curve
         ));
         console.log(`TimeLockNonTransferablePool deployed at: ${timeLockNonTransferablePool.address}`);
 
@@ -47,7 +49,8 @@ task("deploy-time-lock-non-transferable-pool")
                     parseEther(taskArgs.escrowPortion),
                     taskArgs.escrowDuration,
                     parseEther(taskArgs.maxBonus),
-                    taskArgs.maxLockDuration
+                    taskArgs.maxLockDuration,
+                    taskArgs.curve
                 ]
             });
         }
