@@ -108,9 +108,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         
         // Enforce min increase to prevent flash loan or MEV transaction ordering
         uint256 increaseDuration = _increaseDuration.max(MIN_LOCK_DURATION);
-
-        // Don't allow locking > maxLockDuration
-        uint256 duration = maxLockDuration.min(uint256(userDeposit.end - userDeposit.start) + increaseDuration);
+        
+        // New duration is the time expiration plus the increase
+        uint256 duration = maxLockDuration.min(uint256(userDeposit.end - block.timestamp) + increaseDuration);
 
         uint256 mintAmount = userDeposit.amount * getMultiplier(duration) / 1e18;
 
@@ -126,7 +126,8 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
         }
 
-        depositsOf[_msgSender()][_depositId].end = userDeposit.start + uint64(duration);
+        depositsOf[_msgSender()][_depositId].start = uint64(block.timestamp);
+        depositsOf[_msgSender()][_depositId].end = uint64(block.timestamp) + uint64(duration);
         emit LockExtended(_increaseDuration, _msgSender());
     }
 

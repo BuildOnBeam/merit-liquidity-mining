@@ -225,21 +225,37 @@ describe("TimeLockPool", function () {
             .withArgs(THREE_MONTHS, account1.address);
         });
 
-        it("Extending should extend the end time in the struct", async() => {
+        it("Extending should change start and extend end time in the struct", async() => {
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
-            expect(startUserDepostit.end.sub(startUserDepostit.start)).to.be.eq(THREE_MONTHS);
 
-            await timeLockPool.extendLock(0, THREE_MONTHS)
+            await timeLockPool.extendLock(0, THREE_MONTHS * 2)
 
             const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
-            expect(endUserDepostit.end.sub(endUserDepostit.start)).to.be.eq(THREE_MONTHS * 2);
+            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            expect(endUserDepostit.start).to.be.eq(latestBlockTimestamp)
+            expect(endUserDepostit.end.sub(endUserDepostit.start)).to.be.eq(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2))
+        });
+
+        it("Extending in between end and start should change start and extend end time in the struct", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+
+            const nextBlockTimestamp = (startUserDepostit.end.sub(startUserDepostit.start)).div(2).add(startUserDepostit.start).toNumber();
+
+            await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
+
+            await timeLockPool.extendLock(0, THREE_MONTHS * 2)
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            expect(endUserDepostit.start).to.be.eq(latestBlockTimestamp)
+            expect(endUserDepostit.end.sub(endUserDepostit.start)).to.be.eq(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2))
         });
 
         it("Extending should mint correct amount of tokens and change shareAmount in the struct", async() => {
             const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
             const startBalance = await timeLockPool.balanceOf(account1.address);
 
-            await timeLockPool.extendLock(0, THREE_MONTHS)
+            await timeLockPool.extendLock(0, THREE_MONTHS * 2)
 
             const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
             const endBalance = await timeLockPool.balanceOf(account1.address);
@@ -247,7 +263,31 @@ describe("TimeLockPool", function () {
             expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
             expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
             
-            const sixMonthsMultiplier = await timeLockPool.getMultiplier((THREE_MONTHS * 2));
+            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            const sixMonthsMultiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2));
+            const theoreticalEndShareAmount = DEPOSIT_AMOUNT.mul(sixMonthsMultiplier).div(parseEther("1"));
+
+            expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
+        });
+
+        it("Extending in between end and start should mint correct amount of tokens and change shareAmount in the struct", async() => {
+            const startUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const startBalance = await timeLockPool.balanceOf(account1.address);
+
+            const nextBlockTimestamp = (startUserDepostit.end.sub(startUserDepostit.start)).div(2).add(startUserDepostit.start).toNumber();
+
+            await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
+
+            await timeLockPool.extendLock(0, THREE_MONTHS * 2)
+
+            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
+            const endBalance = await timeLockPool.balanceOf(account1.address);
+
+            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
+            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
+            
+            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
+            const sixMonthsMultiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2));
             const theoreticalEndShareAmount = DEPOSIT_AMOUNT.mul(sixMonthsMultiplier).div(parseEther("1"));
 
             expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
