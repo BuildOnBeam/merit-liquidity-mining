@@ -10,10 +10,14 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 contract MerkleDrop is AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
+    error NotRewardDistributorError();
+
     bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
 
     modifier onlyRewardDistributor {
-        require(hasRole(REWARD_DISTRIBUTOR_ROLE, _msgSender()), "MerkleDrop.onlyRewardDistributor: permission denied");
+        if (!hasRole(REWARD_DISTRIBUTOR_ROLE, _msgSender())) {
+            revert NotRewardDistributorError();
+        }
         _;
     }
 

@@ -9,10 +9,10 @@ import DropMerkleTree from "../utils/DropMerkleTree";
 import { constants, ethers, utils } from "ethers";
 
 const INITIAL_MINT = parseEther("100000");
-const TOKEN_COUNT = 5;
-const NAME = "NAME";
-const SYMBOL = "SYMBOL";
-const MINT_AMOUNT = parseEther("1000");
+//const TOKEN_COUNT = 5;
+//const NAME = "NAME";
+//const SYMBOL = "SYMBOL";
+//const MINT_AMOUNT = parseEther("1000");
 const PLACE_HOLDER_IPFSHASH = "🏀🎃🍊";
 
 describe("MerkleDrop", function () {
@@ -71,7 +71,7 @@ describe("MerkleDrop", function () {
         it("Should revert if caller without role role", async() => {
             const newRoot = "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0";
             await expect(merkleDrop.connect(deployer).setMerkleRoot(0, newRoot, PLACE_HOLDER_IPFSHASH))
-            .to.be.revertedWith("MerkleDrop.onlyRewardDistributor: permission denied");
+            .to.be.revertedWith("NotRewardDistributorError()");
         });
 
         it("Should emit the event", async() => {
@@ -102,7 +102,7 @@ describe("MerkleDrop", function () {
         });
     });
 
-    describe.only("claim", async() => {
+    describe("claim", async() => {
         it("Should claim ETH correctly and emit event", async() => {
             const dropAmount = 1
             const merkleTree = new DropMerkleTree([
@@ -311,26 +311,5 @@ describe("MerkleDrop", function () {
             await expect(merkleDrop.claimDrop(0, account1.address, token.address, dropAmount*2, proof))
             .to.be.revertedWith("MerkleProofError()")
         });
-
-
     });
-
-    /*
-            const merkleTree = new DropMerkleTree([
-            {
-              address: account1.address,
-              token: tokenContracts[0].address,
-              amount: 100,
-            },
-            {
-              address: account1.address,
-              token: tokenContracts[0].address,
-              amount: 99,
-            },
-        ]);
-    */
-
-
-
-
 })
