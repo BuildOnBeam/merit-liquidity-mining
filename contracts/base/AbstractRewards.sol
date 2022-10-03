@@ -21,6 +21,8 @@ abstract contract AbstractRewards is IAbstractRewards {
   using SafeCast for uint256;
   using SafeCast for int256;
 
+  error ZeroShareSupplyError();
+
 /* ========  Constants  ======== */
   uint128 public constant POINTS_MULTIPLIER = type(uint128).max;
 
@@ -85,7 +87,9 @@ abstract contract AbstractRewards is IAbstractRewards {
    */
   function _distributeRewards(uint256 _amount) internal {
     uint256 shares = getTotalShares();
-    require(shares > 0, "AbstractRewards._distributeRewards: total share supply is zero");
+    if (shares == 0) {
+      revert ZeroShareSupplyError();
+    }
 
     if (_amount > 0) {
       pointsPerShare = pointsPerShare + (_amount * POINTS_MULTIPLIER / shares);

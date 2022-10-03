@@ -25,6 +25,7 @@ contract MerkleDrop is AccessControlEnumerable {
     error NotOwnerError();
     error CallNotSuccessfulError();
     error ZeroFundingError();
+    error AlreadyClaimedError();
 
     event MerkleRootUpdated(uint256 indexed dropId, bytes32 indexed merkleRoot, string indexed ipfsHash);
     event TokenClaimed(uint256 indexed dropId, address indexed receiver, address indexed token);
@@ -92,7 +93,9 @@ contract MerkleDrop is AccessControlEnumerable {
         Drop storage drop = drops[_dropId];
 
         // Checks
-        require(drop.claims[_receiver] == false, "Already claimed");
+        if (drop.claims[_receiver] == true) {
+            revert AlreadyClaimedError();
+        }
         bytes32 leaf = keccak256(abi.encodePacked(_receiver, _token, _amount));
         if (!MerkleProof.verify(_proof, drop.merkleRoot, leaf)) {
             revert MerkleProofError();

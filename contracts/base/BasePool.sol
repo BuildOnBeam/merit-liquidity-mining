@@ -19,6 +19,9 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    error MoreThan100Error();
+    error NoDepositTokenError();
+
     IERC20 public immutable depositToken;
     IERC20 public immutable rewardToken;
     ITimeLockPool public immutable escrowPool;
@@ -36,8 +39,12 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         uint256 _escrowPortion,
         uint256 _escrowDuration
     ) ERC20Permit(_name) ERC20(_name, _symbol) AbstractRewards(balanceOf, totalSupply) {
-        require(_escrowPortion <= 1e18, "BasePool.constructor: Cannot escrow more than 100%");
-        require(_depositToken != address(0), "BasePool.constructor: Deposit token must be set");
+        if (_escrowPortion > 1e18) {
+            revert MoreThan100Error();
+        }
+        if (_depositToken == address(0)) {
+            revert NoDepositTokenError();
+        }
         depositToken = IERC20(_depositToken);
         rewardToken = IERC20(_rewardToken);
         escrowPool = ITimeLockPool(_escrowPool);

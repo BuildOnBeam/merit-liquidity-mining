@@ -238,7 +238,7 @@ describe("TimeLockPool", function () {
         });
 
         it("Withdraw before expiry should fail", async() => {
-            await expect(timeLockPool.withdraw(0, account1.address)).to.be.revertedWith("TimeLockPool.withdraw: too soon");
+            await expect(timeLockPool.withdraw(0, account1.address)).to.be.revertedWith("TooSoonError()");
         });
 
         it("Should work", async() => {

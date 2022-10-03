@@ -14,6 +14,10 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
+    error SmallMaxLockDuration();
+    error NonExistingDepositError();
+    error TooSoonError();
+
     uint256 public immutable maxBonus;
     uint256 public immutable maxLockDuration;
     uint256 public constant MIN_LOCK_DURATION = 10 minutes;
@@ -41,7 +45,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _maxLockDuration,
         uint256[] memory _curve
     ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
-        require(_maxLockDuration >= MIN_LOCK_DURATION, "TimeLockPool.constructor: max lock duration must be greater or equal to mininmum lock duration");
+        if (_maxLockDuration < MIN_LOCK_DURATION) {
+            revert SmallMaxLockDuration();
+        }
         maxBonus = _maxBonus;
         maxLockDuration = _maxLockDuration;
         if (_curve.length < 2) {
@@ -72,7 +78,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _receiver uint256 owner of the lock
      */
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
-        require(_amount > 0, "TimeLockPool.deposit: cannot deposit 0");
+        if (_amount == 0) {
+            revert ZeroAmountError();
+        }
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
@@ -101,9 +109,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _receiver uint256 owner of the lock
      */
     function withdraw(uint256 _depositId, address _receiver) external {
-        require(_depositId < depositsOf[_msgSender()].length, "TimeLockPool.withdraw: Deposit does not exist");
+        if (_depositId >= depositsOf[_msgSender()].length) {
+            revert NonExistingDepositError();
+        }
         Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
-        require(block.timestamp >= userDeposit.end, "TimeLockPool.withdraw: too soon");
+        if (block.timestamp < userDeposit.end) {
+            revert TooSoonError();
+        }
 
         // remove Deposit
         depositsOf[_msgSender()][_depositId] = depositsOf[_msgSender()][depositsOf[_msgSender()].length - 1];

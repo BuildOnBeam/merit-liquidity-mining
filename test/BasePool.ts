@@ -113,7 +113,7 @@ describe("BasePool", function () {
         });
 
         it("Should fail when there are no shares", async() => {
-            await expect(basePool.distributeRewards(DISTRIBUTION_AMOUNT)).to.be.revertedWith("AbstractRewards._distributeRewards: total share supply is zero");
+            await expect(basePool.distributeRewards(DISTRIBUTION_AMOUNT)).to.be.revertedWith("ZeroShareSupplyError()");
         });
 
         it("Should fail when tokens are not approved", async() => {

@@ -240,7 +240,7 @@ describe("MerkleDrop", function () {
             await merkleDrop.claimDrop(0, account1.address, token.address, dropAmount, proof)
 
             await expect(merkleDrop.claimDrop(0, account1.address, token.address, dropAmount, proof))
-            .to.be.revertedWith("Already claimed")
+            .to.be.revertedWith("AlreadyClaimedError()")
         });
 
         it("Should fail if root is incorrect", async() => {
