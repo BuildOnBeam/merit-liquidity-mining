@@ -12,6 +12,8 @@ const POOL_COUNT = 4;
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.6");
 const INITIAL_REWARD_MINT = parseEther("1000000");
+const MAX_BONUS_ESCROW = parseEther("1");
+const MAX_BONUS = parseEther("5");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
 const CURVE = [
     (0*1e18).toString(),
@@ -65,7 +67,7 @@ describe("LiquidityMiningManager", function () {
             constants.AddressZero,
             0,
             0,
-            0,
+            MAX_BONUS_ESCROW,
             ESCROW_DURATION,
             FLAT_CURVE
         );
@@ -87,7 +89,7 @@ describe("LiquidityMiningManager", function () {
                     escrowPool.address,
                     ESCROW_PORTION,
                     ESCROW_DURATION,
-                    0,
+                    MAX_BONUS,
                     ESCROW_PORTION,
                     CURVE
                 )

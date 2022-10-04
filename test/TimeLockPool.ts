@@ -11,7 +11,8 @@ import TimeTraveler from "../utils/TimeTraveler";
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
-const MAX_BONUS = parseEther("6"); // Same as max value in the curve
+const MAX_BONUS = parseEther("10"); // Same as max value in the curve
+const MAX_BONUS_ESCROW = parseEther("1");
 const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 4;
 const INITIAL_MINT = parseEther("1000000");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
@@ -105,7 +106,7 @@ describe("TimeLockPool", function () {
             constants.AddressZero,
             0,
             0,
-            0,
+            MAX_BONUS_ESCROW,
             ESCROW_DURATION,
             FLAT_CURVE
         );
@@ -446,17 +447,6 @@ describe("TimeLockPool", function () {
             const intermediateTime = Math.floor(Math.random() * (MAX_LOCK_DURATION - 1)) + 1;
             const intermediateMultiplier = await timeLockPool.getMultiplier(intermediateTime);
             expect(intermediateMultiplier).to.be.eq(theoreticalMultiplier(intermediateTime, CURVE));
-        });
-
-        it("A multiplier exceeding maxBonus should be capped to maxBonus value", async() => {
-            const point = (30*1e18).toString();
-            await timeLockPool.connect(deployer).setCurvePoint(point, 4);
-            let CHANGED_CURVE = [];
-            CHANGED_CURVE.push(...CURVE);
-            CHANGED_CURVE[CHANGED_CURVE.length - 1] = point;
-
-            const rightCurvePoint = await timeLockPool.getMultiplier(MAX_LOCK_DURATION);
-            expect(rightCurvePoint).to.be.eq(theoreticalMultiplier(MAX_LOCK_DURATION, CHANGED_CURVE)).to.be.eq(MAX_BONUS.add(parseEther("1")).toString());
         });
     });
 
@@ -1006,8 +996,8 @@ describe("TimeLockPool", function () {
             const calldatas: any[] = [];
 
             const newPoint1 = (4*1e18).toString();
-            const newPoint2 = (20*1e18).toString();
-            const newPoint3 = (15*1e18).toString();
+            const newPoint2 = (9*1e18).toString();
+            const newPoint3 = (10*1e18).toString();
             calldatas.push(
                 (await timeLockPool.populateTransaction.setCurvePoint(newPoint1, 2)).data
             );

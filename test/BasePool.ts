@@ -18,6 +18,7 @@ const TOKEN_NAME = "Staked Token";
 const TOKEN_SYMBOL = "STKN";
 const ESCROW_PORTION = parseEther("0.6");
 const ESCROW_DURATION = 60 * 60 * 24 * 365; // 1 year
+const MAX_BONUS_ESCROW = parseEther("1");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
 
 const INITIAL_MINT = parseEther("1000000000");
@@ -70,7 +71,7 @@ describe("BasePool", function () {
             constants.AddressZero,
             0,
             0,
-            0,
+            MAX_BONUS_ESCROW,
             ESCROW_DURATION,
             FLAT_CURVE
         );

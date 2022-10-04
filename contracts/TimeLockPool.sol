@@ -17,6 +17,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error SmallMaxLockDuration();
     error NonExistingDepositError();
     error TooSoonError();
+    error MaxBonusError();
 
     uint256 public immutable maxBonus;
     uint256 public immutable maxLockDuration;
@@ -48,12 +49,17 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();
         }
-        maxBonus = _maxBonus;
-        maxLockDuration = _maxLockDuration;
         if (_curve.length < 2) {
             revert ShortCurveError();
         }
-        curve = _curve;
+        for (uint i=0; i < _curve.length; i++) {
+            if (_curve[i] > _maxBonus) {
+                revert MaxBonusError();
+            }
+            curve.push(_curve[i]);
+        }
+        maxBonus = _maxBonus;
+        maxLockDuration = _maxLockDuration;
         unit = _maxLockDuration / (curve.length - 1);
     }
 
@@ -257,6 +263,14 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         return depositsOf[_account].length;
     }
 
+    function maxBonusError(uint256 _point) internal returns(uint256) {
+        if (_point > maxBonus) {
+            revert MaxBonusError();
+        } else {
+            return _point;
+        }
+    }
+
     /**
      * @notice Can set an entire new curve.
      * @dev This function can change current curve by a completely new. For doing so, it does not
@@ -271,12 +285,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // same length curves
         if (curve.length == _curve.length) {
             for (uint i=0; i < curve.length; i++) {
-                curve[i] = _curve[i];
+                curve[i] = maxBonusError(_curve[i]);
             }
         // replacing with a shorter curve
         } else if (curve.length > _curve.length) {
             for (uint i=0; i < _curve.length; i++) {
-                curve[i] = _curve[i];
+                curve[i] = maxBonusError(_curve[i]);
             }
             uint initialLength = curve.length;
             for (uint j=0; j < initialLength - _curve.length; j++) {
@@ -286,11 +300,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // replacing with a longer curve
         } else {
             for (uint i=0; i < curve.length; i++) {
-                curve[i] = _curve[i];
+                curve[i] = maxBonusError(_curve[i]);
             }
             uint initialLength = curve.length;
             for (uint j=0; j < _curve.length - initialLength; j++) {
-                curve.push(_curve[initialLength + j]);
+                curve.push(maxBonusError(_curve[initialLength + j]));
             }
             unit = maxLockDuration / (curve.length - 1);
         }
@@ -307,6 +321,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _position uint256 position of the array to be set (zero-based indexing convention).
      */
     function setCurvePoint(uint256 _newPoint, uint256 _position) external onlyGov {
+        if (_newPoint > maxBonus) {
+            revert MaxBonusError();
+        }
         if (_position < curve.length) {
             curve[_position] = _newPoint;
         } else if (_position == curve.length) {
