@@ -240,10 +240,10 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // if last point no need to interpolate
         // trim de curve if it exceedes the maxBonus // TODO check if this is needed
         if (n == curve.length - 1) {
-            return 1e18 + maxBonus.min(curve[n]);
+            return 1e18 + curve[n];
         }
         // linear interpolation between points
-        return 1e18 + maxBonus.min(curve[n] + (_lockDuration - n * unit) * (curve[n + 1] - curve[n]) / unit);
+        return 1e18 + curve[n] + (_lockDuration - n * unit) * (curve[n + 1] - curve[n]) / unit;
     }
 
     function getTotalDeposit(address _account) public view returns(uint256) {
