@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import "../interfaces/IAbstractRewards.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { SafeCastUpgradeable as SafeCast } from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
 
 /**
  * @dev Based on: https://github.com/indexed-finance/dividends/blob/master/contracts/base/AbstractDividends.sol
