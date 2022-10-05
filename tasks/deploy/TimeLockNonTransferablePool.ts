@@ -21,18 +21,7 @@ task("deploy-time-lock-non-transferable-pool")
         const signers = await ethers.getSigners();
 
         console.log("Deploying TimeLockNonTransferablePool");
-        const timeLockNonTransferablePool = await (new TimeLockNonTransferablePool__factory(signers[0]).deploy(
-            taskArgs.name,
-            taskArgs.symbol,
-            taskArgs.depositToken,
-            taskArgs.rewardToken,
-            taskArgs.escrowPool,
-            parseEther(taskArgs.escrowPortion),
-            taskArgs.escrowDuration,
-            parseEther(taskArgs.maxBonus),
-            taskArgs.maxLockDuration,
-            taskArgs.curve
-        ));
+        const timeLockNonTransferablePool = await (new TimeLockNonTransferablePool__factory(signers[0]).deploy());
         console.log(`TimeLockNonTransferablePool deployed at: ${timeLockNonTransferablePool.address}`);
 
         if(taskArgs.verify) {
@@ -40,18 +29,7 @@ task("deploy-time-lock-non-transferable-pool")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: timeLockNonTransferablePool.address,
-                constructorArguments: [
-                    taskArgs.name,
-                    taskArgs.symbol,
-                    taskArgs.depositToken,
-                    taskArgs.rewardToken,
-                    taskArgs.escrowPool,
-                    parseEther(taskArgs.escrowPortion),
-                    taskArgs.escrowDuration,
-                    parseEther(taskArgs.maxBonus),
-                    taskArgs.maxLockDuration,
-                    taskArgs.curve
-                ]
+                constructorArguments: []
             });
         }
         console.log("done");

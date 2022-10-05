@@ -47,22 +47,18 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint256 _maxLockDuration,
         uint256[] memory _curve
     ) public virtual initializer {
-        __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
-        if (_maxLockDuration < MIN_LOCK_DURATION) {
-            revert SmallMaxLockDuration();
-        }
-        if (_curve.length < 2) {
-            revert ShortCurveError();
-        }
-        for (uint i=0; i < _curve.length; i++) {
-            if (_curve[i] > _maxBonus) {
-                revert MaxBonusError();
-            }
-            curve.push(_curve[i]);
-        }
-        maxBonus = _maxBonus;
-        maxLockDuration = _maxLockDuration;
-        unit = _maxLockDuration / (curve.length - 1);
+        __TimeLockPool_init(
+            _name,
+            _symbol,
+            _depositToken,
+            _rewardToken,
+            _escrowPool,
+            _escrowPortion,
+            _escrowDuration,
+            _maxBonus,
+            _maxLockDuration,
+            _curve
+        );
     }
 
     function __TimeLockPool_init(
