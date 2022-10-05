@@ -4,7 +4,7 @@ pragma solidity 0.8.7;
 import "./TimeLockPool.sol";
 
 contract TimeLockNonTransferablePool is TimeLockPool {
-    constructor(
+    function initialize(
         string memory _name,
         string memory _symbol,
         address _depositToken,
@@ -15,8 +15,8 @@ contract TimeLockNonTransferablePool is TimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration,
         uint256[] memory _curve
-    ) TimeLockPool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration, _curve) {
-
+    ) public override initializer {
+        __TimeLockPool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration, _maxBonus, _maxLockDuration, _curve);
     }
 
     // disable transfers

@@ -35,7 +35,7 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint64 start;
         uint64 end;
     }
-    constructor(
+    function initialize(
         string memory _name,
         string memory _symbol,
         address _depositToken,
@@ -46,7 +46,38 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration,
         uint256[] memory _curve
-    ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
+    ) public virtual initializer {
+        __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
+        if (_maxLockDuration < MIN_LOCK_DURATION) {
+            revert SmallMaxLockDuration();
+        }
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        for (uint i=0; i < _curve.length; i++) {
+            if (_curve[i] > _maxBonus) {
+                revert MaxBonusError();
+            }
+            curve.push(_curve[i]);
+        }
+        maxBonus = _maxBonus;
+        maxLockDuration = _maxLockDuration;
+        unit = _maxLockDuration / (curve.length - 1);
+    }
+
+    function __TimeLockPool_init(
+        string memory _name,
+        string memory _symbol,
+        address _depositToken,
+        address _rewardToken,
+        address _escrowPool,
+        uint256 _escrowPortion,
+        uint256 _escrowDuration,
+        uint256 _maxBonus,
+        uint256 _maxLockDuration,
+        uint256[] memory _curve
+    ) internal onlyInitializing {
+        __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();
         }

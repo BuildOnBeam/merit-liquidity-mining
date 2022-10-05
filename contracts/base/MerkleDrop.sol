@@ -5,9 +5,9 @@ import { MerkleProofUpgradeable as MerkleProof } from "@openzeppelin/contracts-u
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-
-contract MerkleDrop is AccessControlEnumerable {
+contract MerkleDrop is Initializable, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
     error NotRewardDistributorError();
@@ -40,7 +40,7 @@ contract MerkleDrop is AccessControlEnumerable {
 
     mapping(uint256 => Drop) public drops;
 
-    constructor() {
+    function __MerkleDrop_init() internal onlyInitializing {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
     

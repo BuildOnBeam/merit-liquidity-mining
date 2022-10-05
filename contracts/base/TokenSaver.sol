@@ -4,8 +4,9 @@ pragma solidity 0.8.7;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract TokenSaver is AccessControlEnumerable {
+contract TokenSaver is Initializable, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
     error NotTokenSaverError();
@@ -30,7 +31,7 @@ contract TokenSaver is AccessControlEnumerable {
         _;
     }
 
-    constructor() {
+    function __TokenSaver_init() internal onlyInitializing {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
