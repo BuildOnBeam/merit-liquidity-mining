@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 
-import { TimeLockNonTransferablePool } from "../../typechain";
+import { TimeLockNonTransferablePool, View  } from "../../typechain";
 import sleep from "../../utils/sleep";
 import { constants, utils } from "ethers";
 import { captureRejectionSymbol } from "events";
@@ -14,15 +14,7 @@ task("deploy-liquidity-mining")
     .addFlag("verify")
     .setAction(async(taskArgs, { run, ethers }) => {
     const signers = await ethers.getSigners();
-    /*
-    const liquidityMiningManager:LiquidityMiningManager = await run("deploy-liquidity-mining-manager", {
-        rewardToken: MC,
-        rewardSource: multisig, //multi sig is where the rewards will be stored. 
-        verify: taskArgs.verify
-    });
 
-    // await liquidityMiningManager.deployed();
-    */
     const escrowPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Escrowed Merit Circle",
         symbol: "EMC",
@@ -68,13 +60,11 @@ task("deploy-liquidity-mining")
 
     // await mcLPPool.deployed();
     
-/*
+
     const view:View = await run("deploy-view", {
-        liquidityMiningManager: liquidityMiningManager.address,
-        escrowPool: escrowPool.address,
         verify: taskArgs.verify
     });
-
+/*
     // assign gov role to deployer
     const GOV_ROLE = await liquidityMiningManager.GOV_ROLE();
     const REWARD_DISTRIBUTOR_ROLE = await liquidityMiningManager.REWARD_DISTRIBUTOR_ROLE();
@@ -101,21 +91,20 @@ task("deploy-liquidity-mining")
     await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, multisig)).wait(3);
     console.log("Assigning DEFAULT_ADMIN_ROLE");
     await (await liquidityMiningManager.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
-*/
+
     console.log("Assigning DEFAULT_ADMIN roles on pools");
     const DEFAULT_ADMIN_ROLE = await escrowPool.DEFAULT_ADMIN_ROLE();
     await (await escrowPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
     await (await mcPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
     await (await mcLPPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
-
+*/
     console.log("DONE");
 
     console.table({
-        //liquidityMiningManager: liquidityMiningManager.address,
         escrowPool: escrowPool.address,
         mcPool: mcPool.address,
         mcLPPool: mcLPPool.address,
-        //view: view.address
+        view: view.address
     });
 
     console.log("CHECK IF EVERYTHING IS CORRECTLY SETUP AND THEN RENOUNCE THE DEFAULT_ADMIN_ROLE and pools ON THE liquidityMiningManager CONTRACT FROM THE DEPLOYER ADDRESS");

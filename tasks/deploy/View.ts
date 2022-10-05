@@ -5,14 +5,12 @@ import sleep from "../../utils/sleep";
 const VERIFY_DELAY = 100000;
 
 task("deploy-view")
-    .addParam("liquidityMiningManager", "Address of the liquidity mining manager contract")
-    .addParam("escrowPool", "Address of the escrow pool")
     .addFlag("verify")
     .setAction(async(taskArgs, { ethers, run }) => {
         const signers = await ethers.getSigners();
 
         console.log("Deploying View");
-        const view = await (new View__factory(signers[0])).deploy(taskArgs.liquidityMiningManager, taskArgs.escrowPool);
+        const view = await (new View__factory(signers[0])).deploy();
         console.log(`View deployed at: ${view.address}`);
 
         if(taskArgs.verify) {
@@ -20,10 +18,7 @@ task("deploy-view")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: view.address,
-                constructorArguments: [
-                    taskArgs.liquidityMiningManager,
-                    taskArgs.escrowPool
-                ]
+                constructorArguments: []
             });
         }
 
