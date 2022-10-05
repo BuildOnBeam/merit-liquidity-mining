@@ -1,5 +1,5 @@
 import { task } from "hardhat/config";
-import { TokenSaver__factory, View__factory } from "../../typechain";
+import { TokenSaver__factory } from "../../typechain";
 import sleep from "../../utils/sleep";
 const VERIFY_DELAY = 100000;
 

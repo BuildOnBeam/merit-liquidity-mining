@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "./LiquidityMiningManager.sol";
+//import "./LiquidityMiningManager.sol";
 import "./TimeLockPool.sol";
 
 
@@ -33,7 +33,7 @@ contract View {
         uint256 weight;
         Deposit[] deposits;
     }
-
+/*
     LiquidityMiningManager public immutable liquidityMiningManager;
     TimeLockPool public immutable escrowPool;
 
@@ -109,5 +109,5 @@ contract View {
         } 
 
     }
-
+*/
 }
