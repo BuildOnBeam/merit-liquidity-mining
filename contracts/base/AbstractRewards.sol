@@ -28,8 +28,8 @@ abstract contract AbstractRewards is Initializable, IAbstractRewards {
   uint128 public constant POINTS_MULTIPLIER = type(uint128).max;
 
 /* ========  Internal Function References  ======== */
-  function(address) view returns (uint256) private immutable getSharesOf;
-  function() view returns (uint256) private immutable getTotalShares;
+  function(address) view returns (uint256) private getSharesOf;
+  function() view returns (uint256) private getTotalShares;
 
 /* ========  Storage  ======== */
   uint256 public pointsPerShare;

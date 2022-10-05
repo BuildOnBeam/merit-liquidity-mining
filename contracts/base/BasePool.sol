@@ -23,11 +23,11 @@ abstract contract BasePool is Initializable, ERC20Votes, AbstractRewards, IBaseP
     error MoreThan100Error();
     error NoDepositTokenError();
 
-    IERC20 public immutable depositToken;
-    IERC20 public immutable rewardToken;
-    ITimeLockPool public immutable escrowPool;
-    uint256 public immutable escrowPortion; // how much is escrowed 1e18 == 100%
-    uint256 public immutable escrowDuration; // escrow duration in seconds
+    IERC20 public depositToken;
+    IERC20 public rewardToken;
+    ITimeLockPool public escrowPool;
+    uint256 public escrowPortion; // how much is escrowed 1e18 == 100%
+    uint256 public escrowDuration; // escrow duration in seconds
 
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
 
