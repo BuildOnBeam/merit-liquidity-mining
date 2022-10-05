@@ -11,11 +11,11 @@ import "../interfaces/IBasePool.sol";
 import "../interfaces/ITimeLockPool.sol";
 
 import "./AbstractRewards.sol";
-import "./TokenSaver.sol";
+//import "./TokenSaver.sol";
 import "./MerkleDrop.sol";
 import "./BoringBatchable.sol";
 
-abstract contract BasePool is Initializable, ERC20Votes, AbstractRewards, IBasePool, TokenSaver, MerkleDrop, BaseBoringBatchable {
+abstract contract BasePool is Initializable, ERC20Votes, AbstractRewards, IBasePool, /*TokenSaver,*/ MerkleDrop, BaseBoringBatchable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -43,8 +43,7 @@ abstract contract BasePool is Initializable, ERC20Votes, AbstractRewards, IBaseP
         __ERC20Permit_init(_name); // only initializes ERC712Permit
         __ERC20_init(_name, _symbol); // unchained or not it only saves the variables
         __AbstractRewards_init(balanceOf, totalSupply);
-        __TokenSaver_init(); // done
-        __MerkleDrop_init();  // done
+        __MerkleDrop_init();
 
         if (_escrowPortion > 1e18) {
             revert MoreThan100Error();

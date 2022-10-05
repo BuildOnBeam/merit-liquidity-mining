@@ -4,22 +4,12 @@ pragma solidity 0.8.7;
 import { MerkleProofUpgradeable as MerkleProof } from "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+//import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./TokenSaver.sol";
 
-contract MerkleDrop is Initializable, AccessControlEnumerable {
+contract MerkleDrop is Initializable, TokenSaver/*, AccessControlEnumerable*/ {
     using SafeERC20 for IERC20;
-
-    error NotRewardDistributorError();
-
-    bytes32 public constant REWARD_DISTRIBUTOR_ROLE = keccak256("REWARD_DISTRIBUTOR_ROLE");
-
-    modifier onlyRewardDistributor {
-        if (!hasRole(REWARD_DISTRIBUTOR_ROLE, _msgSender())) {
-            revert NotRewardDistributorError();
-        }
-        _;
-    }
 
     error MerkleProofError();
     error NotOwnerError();
@@ -41,7 +31,7 @@ contract MerkleDrop is Initializable, AccessControlEnumerable {
     mapping(uint256 => Drop) public drops;
 
     function __MerkleDrop_init() internal onlyInitializing {
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        __TokenSaver_init();
     }
     
     /**
@@ -54,7 +44,7 @@ contract MerkleDrop is Initializable, AccessControlEnumerable {
         uint256 _dropId,
         bytes32 _merkleRoot,
         string memory _ipfsHash
-    ) external onlyRewardDistributor {
+    ) external onlyGov {
         drops[_dropId].merkleRoot = _merkleRoot;
         emit MerkleRootUpdated(_dropId, _merkleRoot, _ipfsHash);
     }
@@ -122,7 +112,8 @@ contract MerkleDrop is Initializable, AccessControlEnumerable {
      * @notice Send ETH to the contract
      * @dev Only participants with reward distributor role can use this function
      */
-    function fundWithETH() external payable onlyRewardDistributor {
+    
+    function fundWithETH() external payable onlyGov {
         if (msg.value == 0) {
             revert ZeroFundingError();
         }

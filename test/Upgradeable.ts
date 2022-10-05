@@ -155,7 +155,6 @@ describe("TimeLockPool", function () {
         await timeTraveler.revertSnapshot();
     })
 
-
     describe("deposit", async() => {
 
         const DEPOSIT_AMOUNT = parseEther("10");

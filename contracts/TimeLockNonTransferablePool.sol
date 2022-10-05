@@ -4,6 +4,9 @@ pragma solidity 0.8.7;
 import "./TimeLockPool.sol";
 
 contract TimeLockNonTransferablePool is TimeLockPool {
+
+    error NonTransferableError();
+    
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -21,6 +24,6 @@ contract TimeLockNonTransferablePool is TimeLockPool {
 
     // disable transfers
     function _transfer(address _from, address _to, uint256 _amount) internal override {
-        revert("NON_TRANSFERABLE");
+        revert NonTransferableError();
     }
 }
