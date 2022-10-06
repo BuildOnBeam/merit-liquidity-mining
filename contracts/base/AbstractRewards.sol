@@ -2,7 +2,8 @@
 pragma solidity 0.8.7;
 
 import "../interfaces/IAbstractRewards.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { SafeCastUpgradeable as SafeCast } from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @dev Based on: https://github.com/indexed-finance/dividends/blob/master/contracts/base/AbstractDividends.sol
@@ -16,7 +17,7 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
  * Many functions were renamed as "rewards" rather than "funds" and the core functionality was separated
  * into this abstract contract which can be inherited by anything tracking ownership of reward shares.
  */
-abstract contract AbstractRewards is IAbstractRewards {
+abstract contract AbstractRewards is Initializable, IAbstractRewards {
   using SafeCast for uint128;
   using SafeCast for uint256;
   using SafeCast for int256;
@@ -27,18 +28,18 @@ abstract contract AbstractRewards is IAbstractRewards {
   uint128 public constant POINTS_MULTIPLIER = type(uint128).max;
 
 /* ========  Internal Function References  ======== */
-  function(address) view returns (uint256) private immutable getSharesOf;
-  function() view returns (uint256) private immutable getTotalShares;
+  function(address) view returns (uint256) private getSharesOf;
+  function() view returns (uint256) private getTotalShares;
 
 /* ========  Storage  ======== */
   uint256 public pointsPerShare;
   mapping(address => int256) public pointsCorrection;
   mapping(address => uint256) public withdrawnRewards;
 
-  constructor(
+  function __AbstractRewards_init(
     function(address) view returns (uint256) getSharesOf_,
     function() view returns (uint256) getTotalShares_
-  ) {
+  ) internal onlyInitializing {
     getSharesOf = getSharesOf_;
     getTotalShares = getTotalShares_;
   }

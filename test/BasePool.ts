@@ -8,8 +8,10 @@ import {
     TestBasePool__factory,
     TestToken,
     TestToken__factory,
-    TimeLockPool,
-    TimeLockPool__factory
+    TestTimeLockPool,
+    TestTimeLockPool__factory,
+    TimeLockNonTransferablePool,
+    TimeLockNonTransferablePool__factory
 } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 
@@ -34,7 +36,7 @@ describe("BasePool", function () {
     let signers: SignerWithAddress[];
 
     let basePool: TestBasePool;
-    let escrowPool: TimeLockPool;
+    let escrowPool: TestTimeLockPool;
     let depositToken: TestToken;
     let rewardToken: TestToken;
 
@@ -62,8 +64,8 @@ describe("BasePool", function () {
         await rewardToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account2.address, INITIAL_MINT);
 
-        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
-        escrowPool = await timeLockPoolFactory.deploy(
+        const testTimeLockPool = new TestTimeLockPool__factory(deployer);
+        escrowPool = await testTimeLockPool.deploy(
             "Escrow Pool",
             "ESCRW",
             rewardToken.address,

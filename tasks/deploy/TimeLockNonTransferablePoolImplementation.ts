@@ -5,17 +5,17 @@ import sleep from "../../utils/sleep";
 
 const VERIFY_DELAY = 100000;
 
-task("deploy-time-lock-non-transferable-pool")
+task("deploy-time-lock-non-transferable-pool-implementation")
     .addFlag("verify")
     .setAction(async(taskArgs, { ethers, run }) => {
         const signers = await ethers.getSigners();
 
-        console.log("Deploying TimeLockNonTransferablePool");
+        console.log("Deploying TimeLockNonTransferablePoolImplementation");
         const timeLockNonTransferablePool = await (new TimeLockNonTransferablePool__factory(signers[0]).deploy());
-        console.log(`TimeLockNonTransferablePool deployed at: ${timeLockNonTransferablePool.address}`);
+        console.log(`TimeLockNonTransferablePoolImplementation deployed at: ${timeLockNonTransferablePool.address}`);
 
         if(taskArgs.verify) {
-            console.log("Verifying TimeLockNonTransferablePool, can take some time")
+            console.log("Verifying TimeLockNonTransferablePoolImplementation, can take some time")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: timeLockNonTransferablePool.address,

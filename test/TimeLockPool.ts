@@ -2,12 +2,29 @@ import { parseEther, formatEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
-import { BigNumber, constants } from "ethers";
-import hre from "hardhat";
-import { TestToken__factory, TimeLockPool__factory } from "../typechain";
-import { TestToken } from "../typechain";
-import { TimeLockPool } from "../typechain/TimeLockPool";
+import { BigNumber, constants, Contract } from "ethers";
+import hre, { ethers } from "hardhat";
+import {
+    View__factory,
+    TestToken__factory,
+    TimeLockPool__factory,
+    TestTimeLockPool__factory,
+    ProxyAdmin__factory,
+    TransparentUpgradeableProxy__factory,
+    TimeLockNonTransferablePoolV2__factory
+} from "../typechain";
+import { 
+    View,
+    TestToken,
+    TimeLockPool,
+    TestTimeLockPool,
+    ProxyAdmin,
+    TransparentUpgradeableProxy,
+    TimeLockNonTransferablePoolV2
+} from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
+import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeLockPool.json";
+import * as TimeLockNonTransferablePoolV2JSON from "../artifacts/contracts/test/TimeLockNonTransferablePoolV2.sol/TimeLockNonTransferablePoolV2.json";
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
@@ -16,6 +33,7 @@ const MAX_BONUS_ESCROW = parseEther("1");
 const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 4;
 const INITIAL_MINT = parseEther("1000000");
 const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
+const ESCROW_POOL = "0xfeea44bc2161f2fe11d55e557ae4ec855e2d1168";
 const CURVE = [
     (0*1e18).toString(),
     (0.65*1e18).toString(),
@@ -71,10 +89,13 @@ describe("TimeLockPool", function () {
     let account4: SignerWithAddress;
     let signers: SignerWithAddress[];
 
-    let timeLockPool: TimeLockPool;
-    let escrowPool: TimeLockPool;
     let depositToken: TestToken;
     let rewardToken: TestToken;
+    let timeLockPool: Contract;
+    let testTimeLockPoolImplementation: TimeLockPool;
+    let escrowPool: TestTimeLockPool;
+    let proxyAdmin: ProxyAdmin;
+    let proxy: TransparentUpgradeableProxy;
     
     const timeTraveler = new TimeTraveler(hre.network.provider);
 
@@ -96,9 +117,10 @@ describe("TimeLockPool", function () {
         await depositToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account1.address, INITIAL_MINT);
 
-        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
-        
-        escrowPool = await timeLockPoolFactory.deploy(
+        // Deploy to use its address as input in the initializer parameters of the implementation
+        const testTimeLockPoolFactory = new TestTimeLockPool__factory(deployer);
+
+        escrowPool = await testTimeLockPoolFactory.deploy(
             "ESCROW",
             "ESCRW",
             rewardToken.address,
@@ -110,20 +132,22 @@ describe("TimeLockPool", function () {
             ESCROW_DURATION,
             FLAT_CURVE
         );
-
-        timeLockPool = await timeLockPoolFactory.deploy(
+        
+        // Deploy the TimeLockPool implementation
+        //const timeLockPoolFactory = new TestTimeLockPool__factory(deployer);
+        timeLockPool = await testTimeLockPoolFactory.deploy(
             "Staking Pool",
             "STK",
             depositToken.address,
             rewardToken.address,
             escrowPool.address,
-            ESCROW_PORTION,
-            ESCROW_DURATION,
-            MAX_BONUS,
+            ESCROW_PORTION.div(2),
+            ESCROW_DURATION * 2,
+            MAX_BONUS.mul(10),
             MAX_LOCK_DURATION,
             CURVE
         );
-        
+
         const GOV_ROLE = await timeLockPool.GOV_ROLE();
         await timeLockPool.grantRole(GOV_ROLE, deployer.address);
 
@@ -1048,6 +1072,63 @@ describe("TimeLockPool", function () {
 
             await expect(timeLockPool.connect(deployer).batch(calldatas, true)).to.be.revertedWith("Transaction reverted silently");
             await expect(timeLockPool.curve(2)).to.be.reverted;
+        });
+
+        it("Should not revert after a failed call", async() => {
+            const NEW_CURVE = [
+                (0*1e18).toString(),
+                (5*1e18).toString()
+            ]
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
+
+            const calldatas: any[] = [];
+
+            const newPoint1 = (4*1e18).toString();
+            const newPoint2 = (20*1e18).toString();
+            const newPoint3 = (15*1e18).toString();
+            
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint1, 6)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint2, 2)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint3, 3)).data
+            );
+
+            await expect(timeLockPool.connect(deployer).batch(calldatas, false)).not.to.be.reverted;
+        });
+    });
+
+    describe("View", async() => {
+        it("Should retrieve correct information from a user from one pool", async() => {
+            const viewFactory = new View__factory(deployer);
+            let view: View;
+            view = await viewFactory.deploy();
+
+            const DEPOSIT_AMOUNT = parseEther("10");
+
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
+            await timeLockPool.deposit(DEPOSIT_AMOUNT.mul(2), 0, account3.address);
+            const deposit0 = await timeLockPool.depositsOf(account3.address, 0);
+            const deposit1 = await timeLockPool.depositsOf(account3.address, 1);
+
+            const viewData = await view.fetchData(account3.address, [timeLockPool.address]);
+
+            expect(viewData[0].poolAddress).to.be.eq(timeLockPool.address);
+
+            expect(viewData[0].deposits[0].amount.toString()).to.be.eq(deposit0.amount.toString())
+            expect(viewData[0].deposits[0].shareAmount.toString()).to.be.eq(deposit0.shareAmount.toString())
+            expect(viewData[0].deposits[0].start.toString()).to.be.eq(deposit0.start.toString())
+            expect(viewData[0].deposits[0].end.toString()).to.be.eq(deposit0.end.toString())
+
+            expect(viewData[0].deposits[1].amount.toString()).to.be.eq(deposit1.amount.toString())
+            expect(viewData[0].deposits[1].shareAmount.toString()).to.be.eq(deposit1.shareAmount.toString())
+            expect(viewData[0].deposits[1].start.toString()).to.be.eq(deposit1.start.toString())
+            expect(viewData[0].deposits[1].end.toString()).to.be.eq(deposit1.end.toString())
         });
     });
 });
