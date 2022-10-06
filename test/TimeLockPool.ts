@@ -5,6 +5,7 @@ import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants, Contract } from "ethers";
 import hre, { ethers } from "hardhat";
 import {
+    View__factory,
     TestToken__factory,
     TimeLockPool__factory,
     TestTimeLockPool__factory,
@@ -13,6 +14,7 @@ import {
     TimeLockNonTransferablePoolV2__factory
 } from "../typechain";
 import { 
+    View,
     TestToken,
     TimeLockPool,
     TestTimeLockPool,
@@ -1070,6 +1072,63 @@ describe("TimeLockPool", function () {
 
             await expect(timeLockPool.connect(deployer).batch(calldatas, true)).to.be.revertedWith("Transaction reverted silently");
             await expect(timeLockPool.curve(2)).to.be.reverted;
+        });
+
+        it("Should not revert after a failed call", async() => {
+            const NEW_CURVE = [
+                (0*1e18).toString(),
+                (5*1e18).toString()
+            ]
+            await timeLockPool.connect(deployer).setCurve(NEW_CURVE);
+
+            const calldatas: any[] = [];
+
+            const newPoint1 = (4*1e18).toString();
+            const newPoint2 = (20*1e18).toString();
+            const newPoint3 = (15*1e18).toString();
+            
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint1, 6)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint2, 2)).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.setCurvePoint(newPoint3, 3)).data
+            );
+
+            await expect(timeLockPool.connect(deployer).batch(calldatas, false)).not.to.be.reverted;
+        });
+    });
+
+    describe("View", async() => {
+        it("Should retrieve correct information from a user from one pool", async() => {
+            const viewFactory = new View__factory(deployer);
+            let view: View;
+            view = await viewFactory.deploy();
+
+            const DEPOSIT_AMOUNT = parseEther("10");
+
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
+            await timeLockPool.deposit(DEPOSIT_AMOUNT.mul(2), 0, account3.address);
+            const deposit0 = await timeLockPool.depositsOf(account3.address, 0);
+            const deposit1 = await timeLockPool.depositsOf(account3.address, 1);
+
+            const viewData = await view.fetchData(account3.address, [timeLockPool.address]);
+
+            expect(viewData[0].poolAddress).to.be.eq(timeLockPool.address);
+
+            expect(viewData[0].deposits[0].amount.toString()).to.be.eq(deposit0.amount.toString())
+            expect(viewData[0].deposits[0].shareAmount.toString()).to.be.eq(deposit0.shareAmount.toString())
+            expect(viewData[0].deposits[0].start.toString()).to.be.eq(deposit0.start.toString())
+            expect(viewData[0].deposits[0].end.toString()).to.be.eq(deposit0.end.toString())
+
+            expect(viewData[0].deposits[1].amount.toString()).to.be.eq(deposit1.amount.toString())
+            expect(viewData[0].deposits[1].shareAmount.toString()).to.be.eq(deposit1.shareAmount.toString())
+            expect(viewData[0].deposits[1].start.toString()).to.be.eq(deposit1.start.toString())
+            expect(viewData[0].deposits[1].end.toString()).to.be.eq(deposit1.end.toString())
         });
     });
 });
