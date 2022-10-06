@@ -5,22 +5,23 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC20VotesUpgradeable as ERC20Votes } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 import { SafeCastUpgradeable as SafeCast } from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-//import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interfaces/IBasePool.sol";
 import "../interfaces/ITimeLockPool.sol";
 
 import "./AbstractRewards.sol";
-import "./MerkleDrop.sol";
 import "./BoringBatchable.sol";
 
-abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, MerkleDrop, BaseBoringBatchable {
+abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes, AbstractRewards, IBasePool, BaseBoringBatchable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    error MoreThan100Error();
+    error MoreThanOneError();
     error NoDepositTokenError();
+    error NotGovError();
 
     IERC20 public depositToken;
     IERC20 public rewardToken;
@@ -28,7 +29,21 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, MerkleDrop
     uint256 public escrowPortion; // how much is escrowed 1e18 == 100%
     uint256 public escrowDuration; // escrow duration in seconds
 
+    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
+
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
+
+    // Saves space calling _onlyGov instead having the code
+    modifier onlyGov() {
+        _onlyGov();
+        _;
+    }
+    
+    function _onlyGov() private view {
+        if (!hasRole(GOV_ROLE, _msgSender())) {
+            revert NotGovError();
+        }
+    }
 
     function __BasePool_init(
         string memory _name,
@@ -42,10 +57,11 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, MerkleDrop
         __ERC20Permit_init(_name); // only initializes ERC712Permit
         __ERC20_init(_name, _symbol); // unchained or not it only saves the variables
         __AbstractRewards_init(balanceOf, totalSupply);
-        __MerkleDrop_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        __AccessControlEnumerable_init();
 
         if (_escrowPortion > 1e18) {
-            revert MoreThan100Error();
+            revert MoreThanOneError();
         }
         if (_depositToken == address(0)) {
             revert NoDepositTokenError();
