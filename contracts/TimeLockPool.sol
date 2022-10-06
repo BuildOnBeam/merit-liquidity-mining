@@ -4,12 +4,9 @@ pragma solidity 0.8.7;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { MathUpgradeable as Math } from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-//import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
-
-//import "hardhat/console.sol";
 
 contract TimeLockPool is BasePool, ITimeLockPool {
     using Math for uint256;
@@ -35,7 +32,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint64 start;
         uint64 end;
     }
-    function initialize(
+    function __TimeLockPool_init(
         string memory _name,
         string memory _symbol,
         address _depositToken,
@@ -46,7 +43,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration,
         uint256[] memory _curve
-    ) public initializer {
+    ) internal onlyInitializing {
         __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();

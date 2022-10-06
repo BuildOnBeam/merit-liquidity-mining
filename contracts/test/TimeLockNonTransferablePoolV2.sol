@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import "../TimeLockPool.sol";
+import "../TimeLockNonTransferablePool.sol";
 
-contract TimeLockPoolV2 is TimeLockPool {
+contract TimeLockNonTransferablePoolV2 is TimeLockNonTransferablePool {
     function testingUpgrade() public view returns(uint256) {
         return 7357;
     }
