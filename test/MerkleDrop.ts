@@ -2,7 +2,7 @@ import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import hre from "hardhat";
-import { TestToken, TestToken__factory, MerkleDrop, MerkleDrop__factory } from "../typechain";
+import { TestToken, TestToken__factory, TestMerkleDrop, TestMerkleDrop__factory } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 import DropMerkleTree from "../utils/DropMerkleTree";
 
@@ -17,7 +17,7 @@ const PLACE_HOLDER_IPFSHASH = "🏀🎃🍊";
 
 describe("MerkleDrop", function () {
 
-    let merkleDrop: MerkleDrop;
+    let merkleDrop: TestMerkleDrop;
     let deployer: SignerWithAddress;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
@@ -33,14 +33,14 @@ describe("MerkleDrop", function () {
             ...signers
         ] = await hre.ethers.getSigners();
 
-        merkleDrop = await (new MerkleDrop__factory(deployer)).deploy();
+        merkleDrop = await (new TestMerkleDrop__factory(deployer)).deploy();
 
         token = await (new TestToken__factory(deployer)).deploy("TEST", "TEST");
         await token.mint(merkleDrop.address, INITIAL_MINT);
 
-        const REWARD_DISTRIBUTOR_ROLE = await merkleDrop.REWARD_DISTRIBUTOR_ROLE();
+        const GOV_ROLE = await merkleDrop.GOV_ROLE();
         
-        await merkleDrop.grantRole(REWARD_DISTRIBUTOR_ROLE, account1.address);
+        await merkleDrop.grantRole(GOV_ROLE, account1.address);
         
         await timeTraveler.snapshot();
     });
@@ -71,7 +71,7 @@ describe("MerkleDrop", function () {
         it("Should revert if caller without role role", async() => {
             const newRoot = "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0";
             await expect(merkleDrop.connect(deployer).setMerkleRoot(0, newRoot, PLACE_HOLDER_IPFSHASH))
-            .to.be.revertedWith("NotRewardDistributorError()");
+            .to.be.revertedWith("NotGovError()");
         });
 
         it("Should emit the event", async() => {
@@ -82,52 +82,7 @@ describe("MerkleDrop", function () {
         });
     });
 
-    describe("fundWithETH", async() => {
-        it("Should fund", async() => {
-            const dropAmount = 1
-            const provider = hre.ethers.provider
-
-            await merkleDrop.connect(account1).fundWithETH({value: dropAmount});
-                        
-            const ETHbalance = await provider.getBalance(merkleDrop.address);
-
-            expect(ETHbalance).to.be.eq(dropAmount)
-        });
-
-        it("Should revert with error", async() => {
-            const dropAmount = 0
-            
-            await expect(merkleDrop.connect(account1).fundWithETH({value: dropAmount}))
-            .to.be.revertedWith("ZeroFundingError()")
-        });
-    });
-
     describe("claim", async() => {
-        it("Should claim ETH correctly and emit event", async() => {
-            const dropAmount = 1
-            const merkleTree = new DropMerkleTree([
-                {
-                  address: account1.address,
-                  token: constants.AddressZero,
-                  amount: dropAmount,
-                }
-            ]);
-
-            await merkleDrop.connect(account1).setMerkleRoot(0, merkleTree.merkleTree.getRoot(), PLACE_HOLDER_IPFSHASH);
-            
-            const proof = merkleTree.getProof(account1.address, constants.AddressZero, dropAmount);
-
-            const provider = hre.ethers.provider
-
-            await merkleDrop.connect(account1).fundWithETH({value: dropAmount});
-                       
-            await expect(merkleDrop.claimDrop(0, account1.address, constants.AddressZero, dropAmount, proof))
-            .to.emit(merkleDrop, "TokenClaimed")
-            .withArgs(0, account1.address, constants.AddressZero);
-                        
-            expect(await provider.getBalance(merkleDrop.address)).to.be.eq(0)
-        });
-
         it("Should fail claim because of insuficient ETH balance", async() => {
             const dropAmount = 1
             const merkleTree = new DropMerkleTree([

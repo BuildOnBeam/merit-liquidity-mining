@@ -4,14 +4,14 @@ pragma solidity 0.8.7;
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { MathUpgradeable as Math } from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+//import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
 //import "hardhat/console.sol";
 
-contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
+contract TimeLockPool is BasePool, ITimeLockPool {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
@@ -46,33 +46,7 @@ contract TimeLockPool is Initializable, BasePool, ITimeLockPool {
         uint256 _maxBonus,
         uint256 _maxLockDuration,
         uint256[] memory _curve
-    ) public virtual initializer {
-        __TimeLockPool_init(
-            _name,
-            _symbol,
-            _depositToken,
-            _rewardToken,
-            _escrowPool,
-            _escrowPortion,
-            _escrowDuration,
-            _maxBonus,
-            _maxLockDuration,
-            _curve
-        );
-    }
-
-    function __TimeLockPool_init(
-        string memory _name,
-        string memory _symbol,
-        address _depositToken,
-        address _rewardToken,
-        address _escrowPool,
-        uint256 _escrowPortion,
-        uint256 _escrowDuration,
-        uint256 _maxBonus,
-        uint256 _maxLockDuration,
-        uint256[] memory _curve
-    ) internal onlyInitializing {
+    ) public initializer {
         __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();

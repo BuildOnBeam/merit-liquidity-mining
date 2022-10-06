@@ -1,12 +1,23 @@
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { BigNumber, constants } from "ethers";
-import hre from "hardhat";
-import { TestToken__factory, TimeLockNonTransferablePool__factory } from "../typechain";
-import { TestToken } from "../typechain";
-import { TimeLockNonTransferablePool } from "../typechain/TimeLockNonTransferablePool";
+import { BigNumber, constants, Contract } from "ethers";
+import hre, { ethers } from "hardhat";
+import {
+    TestToken,
+    TestToken__factory,
+    TimeLockPool,
+    TimeLockPool__factory,
+    TimeLockNonTransferablePool,
+    TimeLockNonTransferablePool__factory,
+    TransparentUpgradeableProxy,
+    TransparentUpgradeableProxy__factory,
+    ProxyAdmin,
+    ProxyAdmin__factory,
+    } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
+import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeLockPool.json";
+
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
@@ -33,11 +44,14 @@ describe("TimeLockNonTransferablePool", function () {
     let account4: SignerWithAddress;
     let signers: SignerWithAddress[];
 
-    let timeLockPool: TimeLockNonTransferablePool;
+    let timeLockPool: Contract;
+    let timeLockPoolImplementation: TimeLockPool;
     let escrowPool: TimeLockNonTransferablePool;
     let depositToken: TestToken;
     let rewardToken: TestToken;
-    
+    let proxyAdmin: ProxyAdmin;
+    let proxy: TransparentUpgradeableProxy;
+
     const timeTraveler = new TimeTraveler(hre.network.provider);
 
     before(async() => {
@@ -58,9 +72,13 @@ describe("TimeLockNonTransferablePool", function () {
         await depositToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account1.address, INITIAL_MINT);
 
-        const timeLockPoolFactory = new TimeLockNonTransferablePool__factory(deployer);
+        // Deploy ProxyAdmin
+        const ProxyAdmin = new ProxyAdmin__factory(deployer);
+        proxyAdmin = await ProxyAdmin.deploy();
         
-        escrowPool = await timeLockPoolFactory.deploy(
+        const timeLockNonTransferablePoolFactory = new TimeLockNonTransferablePool__factory(deployer);
+        
+        escrowPool = await timeLockNonTransferablePoolFactory.deploy(
             "ESCROW",
             "ESCRW",
             rewardToken.address,
@@ -73,7 +91,11 @@ describe("TimeLockNonTransferablePool", function () {
             FLAT_CURVE
         );
 
-        timeLockPool = await timeLockPoolFactory.deploy(
+        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
+        // Deploy the TimeLockPool implementation
+        timeLockPoolImplementation = await timeLockPoolFactory.deploy();
+
+        const initializeParameters = [
             "Staking Pool",
             "STK",
             depositToken.address,
@@ -84,7 +106,19 @@ describe("TimeLockNonTransferablePool", function () {
             MAX_BONUS,
             MAX_LOCK_DURATION,
             CURVE
-        );
+        ]
+
+        const TimeLockPoolInterface = new hre.ethers.utils.Interface(JSON.stringify(TimeLockPoolJSON.abi))
+        console.log(TimeLockPoolJSON.abi);
+        // Encode data to call the initialize function in the implementation
+        const encoded_data = TimeLockPoolInterface.encodeFunctionData("initialize", initializeParameters);
+
+        // Deploy the proxy linking it to the timeLockPoolImplementation and proxyAdmin
+        const Proxy = new TransparentUpgradeableProxy__factory(deployer);
+        proxy = await Proxy.deploy(timeLockPoolImplementation.address, proxyAdmin.address, encoded_data);
+        
+        // Create an interface of the implementation on the proxy so we can send the methods of the implementation
+        timeLockPool = new ethers.Contract(proxy.address, JSON.stringify(TimeLockPoolJSON.abi), deployer);
 
         
         // connect account1 to all contracts
@@ -104,10 +138,14 @@ describe("TimeLockNonTransferablePool", function () {
     })
 
     it("transfer", async() => {
-        await expect(timeLockPool.transfer(account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("NON_TRANSFERABLE");
+        
+        await expect(escrowPool.transfer(account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("NON_TRANSFERABLE");
     });
 
     it("transferFrom", async() => {
-        await expect(timeLockPool.transferFrom(account1.address, account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("NON_TRANSFERABLE");
+
+        await escrowPool.transferFrom(account1.address, account3.address, DEPOSIT_AMOUNT)
+
+        await expect(escrowPool.transferFrom(account1.address, account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("NON_TRANSFERABLE");
     });
 });

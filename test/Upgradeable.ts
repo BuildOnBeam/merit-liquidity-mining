@@ -4,8 +4,9 @@ import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants, Contract  } from "ethers";
 import hre, { ethers } from "hardhat";
-import { TestToken__factory, TimeLockPool__factory, ProxyAdmin__factory, TransparentUpgradeableProxy__factory, TimeLockPoolV2__factory } from "../typechain";
-import { TestToken, ProxyAdmin, TransparentUpgradeableProxy, TimeLockPoolV2 } from "../typechain";
+import { TestToken__factory, TimeLockPool__factory, TimeLockNonTransferablePool__factory } from "../typechain";
+import { ProxyAdmin__factory, TransparentUpgradeableProxy__factory, TimeLockPoolV2__factory } from "../typechain";
+import { TestToken, TimeLockNonTransferablePool, ProxyAdmin, TransparentUpgradeableProxy, TimeLockPoolV2 } from "../typechain";
 import { TimeLockPool } from "../typechain/TimeLockPool";
 import TimeTraveler from "../utils/TimeTraveler";
 import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeLockPool.json";
@@ -78,7 +79,7 @@ describe("TimeLockPool", function () {
     let rewardToken: TestToken;
     let timeLockPool: Contract;
     let timeLockPoolImplementation: TimeLockPool;
-    let escrowPool: TimeLockPool;
+    let escrowPool: TimeLockNonTransferablePool;
     let proxyAdmin: ProxyAdmin;
     let proxy: TransparentUpgradeableProxy;
     
@@ -107,9 +108,21 @@ describe("TimeLockPool", function () {
         proxyAdmin = await ProxyAdmin.deploy();
 
         // Deploy to use its address as input in the initializer parameters of the implementation
-        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
-        escrowPool = await timeLockPoolFactory.deploy();
+        const timeLockPoolNonTransferablePoolFactory = new TimeLockNonTransferablePool__factory(deployer);
+        escrowPool = await timeLockPoolNonTransferablePoolFactory.deploy(
+            "ESCROW",
+            "ESCRW",
+            rewardToken.address,
+            constants.AddressZero,
+            constants.AddressZero,
+            0,
+            0,
+            MAX_BONUS_ESCROW,
+            ESCROW_DURATION,
+            FLAT_CURVE
+        );
 
+        const timeLockPoolFactory = new TimeLockPool__factory(deployer);
         // Deploy the TimeLockPool implementation
         timeLockPoolImplementation = await timeLockPoolFactory.deploy();
 

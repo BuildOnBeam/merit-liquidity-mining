@@ -5,7 +5,7 @@ import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { ERC20VotesUpgradeable as ERC20Votes } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20VotesUpgradeable.sol";
 import { SafeCastUpgradeable as SafeCast } from "@openzeppelin/contracts-upgradeable/utils/math/SafeCastUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+//import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../interfaces/IBasePool.sol";
 import "../interfaces/ITimeLockPool.sol";
@@ -15,7 +15,7 @@ import "./AbstractRewards.sol";
 import "./MerkleDrop.sol";
 import "./BoringBatchable.sol";
 
-abstract contract BasePool is Initializable, ERC20Votes, AbstractRewards, IBasePool, /*TokenSaver,*/ MerkleDrop, BaseBoringBatchable {
+abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, MerkleDrop, BaseBoringBatchable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;

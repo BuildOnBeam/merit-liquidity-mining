@@ -4,11 +4,10 @@ pragma solidity 0.8.7;
 import { MerkleProofUpgradeable as MerkleProof } from "@openzeppelin/contracts-upgradeable/utils/cryptography/MerkleProofUpgradeable.sol";
 import { SafeERC20Upgradeable as SafeERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { IERC20Upgradeable as IERC20 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-//import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
+import { AccessControlEnumerableUpgradeable as AccessControlEnumerable } from "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./TokenSaver.sol";
 
-contract MerkleDrop is Initializable, TokenSaver/*, AccessControlEnumerable*/ {
+contract MerkleDrop is Initializable, AccessControlEnumerable {
     using SafeERC20 for IERC20;
 
     error MerkleProofError();
@@ -16,10 +15,13 @@ contract MerkleDrop is Initializable, TokenSaver/*, AccessControlEnumerable*/ {
     error CallNotSuccessfulError();
     error ZeroFundingError();
     error AlreadyClaimedError();
+    error NotGovError();
 
     event MerkleRootUpdated(uint256 indexed dropId, bytes32 indexed merkleRoot, string indexed ipfsHash);
     event TokenClaimed(uint256 indexed dropId, address indexed receiver, address indexed token);
     event FundedWithEth(uint256 indexed amount);
+    
+    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
 
     struct Drop {
         mapping(address => uint256) reserves;
@@ -31,9 +33,22 @@ contract MerkleDrop is Initializable, TokenSaver/*, AccessControlEnumerable*/ {
     mapping(uint256 => Drop) public drops;
 
     function __MerkleDrop_init() internal onlyInitializing {
-        __TokenSaver_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        __AccessControlEnumerable_init();
+    }
+
+    // Saves space calling _onlyGov instead having the code
+    modifier onlyGov() {
+        _onlyGov();
+        _;
     }
     
+    function _onlyGov() private view {
+        if (!hasRole(GOV_ROLE, _msgSender())) {
+            revert NotGovError();
+        }
+    }
+
     /**
      * @notice Sets the root for claims
      * @param _dropId uint256 id of the drop to be set
@@ -106,19 +121,6 @@ contract MerkleDrop is Initializable, TokenSaver/*, AccessControlEnumerable*/ {
             IERC20(_token).safeTransfer(_receiver, _amount);
         }
         emit TokenClaimed(_dropId, _receiver, _token);
-    }
-
-    /**
-     * @notice Send ETH to the contract
-     * @dev Only participants with reward distributor role can use this function
-     */
-    
-    function fundWithETH() external payable onlyGov {
-        if (msg.value == 0) {
-            revert ZeroFundingError();
-        }
-
-        emit FundedWithEth(msg.value);
     }
 
 }
