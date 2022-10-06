@@ -140,6 +140,7 @@ describe("TimeLockNonTransferablePool", function () {
     });
 
     it("transferFrom", async() => {
-        await expect(timeLockPool.transferFrom(account1.address, account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("NON_TRANSFERABLE");
+        // It does not revert with NON_TRANSFERABLE because open zeppelin contracts change when upgradeable
+        await expect(timeLockPool.transferFrom(account1.address, account3.address, DEPOSIT_AMOUNT)).to.be.revertedWith("ERC20: insufficient allowance");
     });
 });
