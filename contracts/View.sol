@@ -80,4 +80,8 @@ contract View {
         return list;
     }
 
+    function fetchBoth(address _account, address[] memory _oldPools, address[] memory _newPools) public view returns (OldPool[] memory oldPools, Pool[] memory newPools) {
+        oldPools = fetchOldData(_account, _oldPools);
+        newPools = fetchData(_account, _newPools);
+    }
 }
