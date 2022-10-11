@@ -2,7 +2,6 @@
 pragma solidity 0.8.7;
 
 import "./TimeLockPool.sol";
-import "hardhat/console.sol";
 
 /// @dev reader contract to easily fetch all relevant info for an account
 contract View {
@@ -31,7 +30,7 @@ contract View {
         OldDeposit[] deposits;
     }
 
-    function fetchData(address _account, address[] calldata _pools) external view returns (Pool[] memory) {
+    function fetchData(address _account, address[] memory _pools) public view returns (Pool[] memory) {
         Pool[] memory list = new Pool[](_pools.length);
         for(uint256 i = 0; i < _pools.length; i ++) {
 
@@ -56,7 +55,7 @@ contract View {
         return list;
     }
 
-    function fetchOldData(address _account, address[] calldata _pools) external view returns (OldPool[] memory) {
+    function fetchOldData(address _account, address[] memory _pools) public view returns (OldPool[] memory) {
         OldPool[] memory list = new OldPool[](_pools.length);
         for(uint256 i = 0; i < _pools.length; i ++) {
             TimeLockPool poolContract = TimeLockPool(_pools[i]);
