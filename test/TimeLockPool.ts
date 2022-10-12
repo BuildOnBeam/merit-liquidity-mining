@@ -11,7 +11,9 @@ import {
     TestTimeLockPool__factory,
     ProxyAdmin__factory,
     TransparentUpgradeableProxy__factory,
-    TimeLockNonTransferablePoolV2__factory
+    TimeLockNonTransferablePoolV2__factory,
+    TimeLockNonTransferablePool__factory,
+    OldTimeLockNonTransferablePool__factory,
 } from "../typechain";
 import { 
     View,
@@ -20,7 +22,9 @@ import {
     TestTimeLockPool,
     ProxyAdmin,
     TransparentUpgradeableProxy,
-    TimeLockNonTransferablePoolV2
+    TimeLockNonTransferablePoolV2,
+    TimeLockNonTransferablePool,
+    OldTimeLockNonTransferablePool
 } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeLockPool.json";
@@ -1100,35 +1104,6 @@ describe("TimeLockPool", function () {
             );
 
             await expect(timeLockPool.connect(deployer).batch(calldatas, false)).not.to.be.reverted;
-        });
-    });
-
-    describe("View", async() => {
-        it("Should retrieve correct information from a user from one pool", async() => {
-            const viewFactory = new View__factory(deployer);
-            let view: View;
-            view = await viewFactory.deploy();
-
-            const DEPOSIT_AMOUNT = parseEther("10");
-
-            await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
-            await timeLockPool.deposit(DEPOSIT_AMOUNT.mul(2), 0, account3.address);
-            const deposit0 = await timeLockPool.depositsOf(account3.address, 0);
-            const deposit1 = await timeLockPool.depositsOf(account3.address, 1);
-
-            const viewData = await view.fetchData(account3.address, [timeLockPool.address]);
-
-            expect(viewData[0].poolAddress).to.be.eq(timeLockPool.address);
-
-            expect(viewData[0].deposits[0].amount.toString()).to.be.eq(deposit0.amount.toString())
-            expect(viewData[0].deposits[0].shareAmount.toString()).to.be.eq(deposit0.shareAmount.toString())
-            expect(viewData[0].deposits[0].start.toString()).to.be.eq(deposit0.start.toString())
-            expect(viewData[0].deposits[0].end.toString()).to.be.eq(deposit0.end.toString())
-
-            expect(viewData[0].deposits[1].amount.toString()).to.be.eq(deposit1.amount.toString())
-            expect(viewData[0].deposits[1].shareAmount.toString()).to.be.eq(deposit1.shareAmount.toString())
-            expect(viewData[0].deposits[1].start.toString()).to.be.eq(deposit1.start.toString())
-            expect(viewData[0].deposits[1].end.toString()).to.be.eq(deposit1.end.toString())
         });
     });
 });

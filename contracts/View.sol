@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 import "./TimeLockPool.sol";
+import "./test/OldTimeLockPool.sol";
 
 /// @dev reader contract to easily fetch all relevant info for an account
 contract View {
@@ -31,6 +32,7 @@ contract View {
     }
 
     function fetchData(address _account, address[] memory _pools) public view returns (Pool[] memory) {
+        uint256 poolen = _pools.length;
         Pool[] memory list = new Pool[](_pools.length);
         for(uint256 i = 0; i < _pools.length; i ++) {
 
@@ -56,19 +58,20 @@ contract View {
     }
 
     function fetchOldData(address _account, address[] memory _pools) public view returns (OldPool[] memory) {
+        uint256 oldPoolen = _pools.length;
         OldPool[] memory list = new OldPool[](_pools.length);
         for(uint256 i = 0; i < _pools.length; i ++) {
-            TimeLockPool poolContract = TimeLockPool(_pools[i]);
+            OldTimeLockPool poolContract = OldTimeLockPool(_pools[i]);
 
             list[i] = OldPool({
                 poolAddress: _pools[i],
                 deposits: new OldDeposit[](poolContract.getDepositsOfLength(_account))
             });
 
-            TimeLockPool.Deposit[] memory deposits = poolContract.getDepositsOf(_account);
+            OldTimeLockPool.Deposit[] memory deposits = poolContract.getDepositsOf(_account);
 
             for(uint256 j = 0; j < list[i].deposits.length; j ++) {
-                TimeLockPool.Deposit memory deposit = deposits[j];
+                OldTimeLockPool.Deposit memory deposit = deposits[j];
                 list[i].deposits[j] = OldDeposit({
                     amount: deposit.amount,
                     start: deposit.start,
