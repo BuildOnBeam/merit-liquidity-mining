@@ -58,7 +58,6 @@ contract View {
     }
 
     function fetchOldData(address _account, address[] memory _pools) public view returns (OldPool[] memory) {
-        uint256 oldPoolen = _pools.length;
         OldPool[] memory list = new OldPool[](_pools.length);
         for(uint256 i = 0; i < _pools.length; i ++) {
             OldTimeLockPool poolContract = OldTimeLockPool(_pools[i]);

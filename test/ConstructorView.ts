@@ -4,6 +4,7 @@ import { ConstructorView, ConstructorView__factory, TestToken, TestToken__factor
 import hre from "hardhat";
 import { parseEther } from "ethers/lib/utils";
 import { constants } from "ethers";
+import { readView } from "../utils/constructorView";
 
 const CURVE = [
     (0*1e18).toString(),
@@ -88,6 +89,7 @@ describe.only("ConstructorView", function () {
 
             newPools.push(pool);
             newPoolsAddresses.push(pool.address);
+            console.log(newPoolsAddresses)
         }
 
         view = (await new ConstructorView__factory(deployer).deploy(account1.address, [], [])).connect(account1);
@@ -96,7 +98,8 @@ describe.only("ConstructorView", function () {
     it("fetchBoth should work", async() => {
         console.log("getting data");
         // const data = await view.fetchBoth(account1.address, oldPoolsAddresses, newPoolsAddresses);
-        const data = await view.fetchData(account1.address, newPoolsAddresses);
+        // const data = await view.fetchData(account1.address, newPoolsAddresses);
+        const data = await readView(account1.address, oldPoolsAddresses, newPoolsAddresses);
         console.log(data);
     });
 
