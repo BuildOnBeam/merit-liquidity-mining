@@ -19,7 +19,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
-    uint256 public constant MIN_LOCK_DURATION = 10 minutes;
+    uint256 public constant MIN_LOCK_DURATION = 1 days;
     
     uint256[] public curve;
     uint256 public unit;
