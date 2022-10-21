@@ -16,6 +16,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error NonExistingDepositError();
     error TooSoonError();
     error MaxBonusError();
+    error ShareBurningError();
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
@@ -169,13 +170,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // Multiplier curve changes with time, need to check if the mint amount is bigger, equal or smaller than the already minted
         
         // If the new amount if bigger mint the difference
-        if (mintAmount > userDeposit.shareAmount) {
+        if (mintAmount >= userDeposit.shareAmount) {
             depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
             _mint(_msgSender(), mintAmount - userDeposit.shareAmount);
         // If the new amount is less then burn that difference
-        } else if (mintAmount < userDeposit.shareAmount) {
-            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
-            _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
+        } else {
+            revert ShareBurningError();
         }
 
         depositsOf[_msgSender()][_depositId].start = uint64(block.timestamp);
