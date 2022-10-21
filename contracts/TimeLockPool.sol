@@ -277,7 +277,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _curve uint256 array of the points that compose the curve.
      */
     function setCurve(uint256[] calldata _curve) external onlyGov {
-        checkCurve(_curve);
         // same length curves
         if (curve.length == _curve.length) {
             for (uint i=0; i < curve.length; i++) {
@@ -304,6 +303,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             }
             unit = maxLockDuration / (curve.length - 1);
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
     }
 
@@ -330,6 +330,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             }
             curve.pop();
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
     }
 
