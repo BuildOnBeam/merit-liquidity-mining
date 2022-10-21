@@ -16,6 +16,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error NonExistingDepositError();
     error TooSoonError();
     error MaxBonusError();
+    error SmallFirstDepositError();
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
@@ -23,6 +24,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     
     uint256[] public curve;
     uint256 public unit;
+    bool public firstDeposit = true;
 
     mapping(address => Deposit[]) public depositsOf;
 
@@ -86,6 +88,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_amount == 0) {
             revert ZeroAmountError();
         }
+        // check that first deposit is big enough only for non escrowPools
+        if (address(escrowPool) != address(0) && firstDeposit && _amount < 1e18) {
+            revert SmallFirstDepositError();
+            firstDeposit = false;
+        } 
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
