@@ -335,4 +335,18 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         }
         emit CurveChanged(_msgSender());
     }
+
+    function kick(uint256 _depositId, address _user) external {
+        if (_depositId >= depositsOf[_user].length) {
+            revert NonExistingDepositError();
+        }
+        Deposit memory userDeposit = depositsOf[_user][_depositId];
+        if (block.timestamp < userDeposit.end) {
+            revert TooSoonError();
+        }
+
+        // burn pool shares so that resulting are equal to deposit amount
+        _burn(_user, userDeposit.shareAmount - userDeposit.amount);
+        depositsOf[_user][_depositId].shareAmount =  userDeposit.amount;
+    }    
 }
