@@ -14,7 +14,7 @@ import "../interfaces/ITimeLockPool.sol";
 import "./AbstractRewards.sol";
 import "./BoringBatchable.sol";
 
-abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes, AbstractRewards, IBasePool, BaseBoringBatchable {
+abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes, AbstractRewards, IBasePool, BoringBatchable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
