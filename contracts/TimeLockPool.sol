@@ -93,8 +93,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
         duration = duration.max(MIN_LOCK_DURATION);
 
-        depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
-
         uint256 mintAmount = _amount * getMultiplier(duration) / 1e18;
 
         depositsOf[_receiver].push(Deposit({
@@ -105,6 +103,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         }));
 
         _mint(_receiver, mintAmount);
+        depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
         emit Deposited(_amount, duration, _receiver, _msgSender());
     }
 
@@ -209,8 +208,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert DepositExpiredError();
         }
 
-        depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
-
         // Multiplier should be acording the remaining time to the deposit to end
         uint256 remainingDuration = uint256(userDeposit.end - block.timestamp);
 
@@ -220,6 +217,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         depositsOf[_receiver][_depositId].shareAmount += mintAmount;
 
         _mint(_receiver, mintAmount);
+        depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
         emit LockIncreased(_depositId, _receiver, _msgSender(), _increaseAmount);
     }
 

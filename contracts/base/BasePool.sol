@@ -93,8 +93,8 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
 	}
 
     function distributeRewards(uint256 _amount) external override {
-        rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
         _distributeRewards(_amount);
+        rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
     }
 
     function claimRewards(address _receiver) external {
