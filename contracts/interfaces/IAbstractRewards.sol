@@ -18,7 +18,7 @@ interface IAbstractRewards {
 
 	/**
 	 * @dev View the amount of funds that an address has earned in total.
-	 * accumulativeFundsOf(account) = withdrawableRewardsOf(account) + withdrawnRewardsOf(account)
+	 * cumulativeRewardsOf(account) = withdrawableRewardsOf(account) + withdrawnRewardsOf(account)
 	 * = (pointsPerShare * balanceOf(account) + pointsCorrection[account]) / POINTS_MULTIPLIER
 	 * @param account The address of a token holder.
 	 * @return The amount of funds that `account` has earned in total.

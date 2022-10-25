@@ -25,6 +25,8 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
 
     uint256[50] __gap; // Storage gap for reserving storage slots in future upgrades and preserve storage layout.
 
+    uint256 public constant ONE = 1e18; // used as a unit for calculations.
+
     IERC20 public depositToken;
     IERC20 public rewardToken;
     ITimeLockPool public escrowPool;
@@ -62,7 +64,7 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         __AccessControlEnumerable_init();
 
-        if (_escrowPortion > 1e18) {
+        if (_escrowPortion > ONE) {
             revert MoreThanOneError();
         }
         if (_depositToken == address(0)) {
@@ -101,7 +103,7 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
 
     function claimRewards(address _receiver) external {
         uint256 rewardAmount = _prepareCollect(_msgSender());
-        uint256 escrowedRewardAmount = rewardAmount * escrowPortion / 1e18;
+        uint256 escrowedRewardAmount = rewardAmount * escrowPortion / ONE;
         uint256 nonEscrowedRewardAmount = rewardAmount - escrowedRewardAmount;
 
         if(escrowedRewardAmount != 0 && address(escrowPool) != address(0)) {
