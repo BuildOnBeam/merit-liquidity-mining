@@ -16,6 +16,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error NonExistingDepositError();
     error TooSoonError();
     error MaxBonusError();
+    error CurveIncreaseError();
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
@@ -51,6 +52,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_curve.length < 2) {
             revert ShortCurveError();
         }
+        checkCurve(_curve);
         for (uint i=0; i < _curve.length; i++) {
             if (_curve[i] > _maxBonus) {
                 revert MaxBonusError();
@@ -307,6 +309,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             }
             unit = maxLockDuration / (curve.length - 1);
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
     }
 
@@ -335,6 +338,18 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             curve.pop();
             unit = maxLockDuration / (curve.length - 1);
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
+    }
+
+    function checkCurve(uint256[] memory _curve) internal {
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        for (uint256 i; i < _curve.length - 1; ++i) {
+            if (_curve[i + 1] < _curve[i]) {
+                revert CurveIncreaseError();
+            }
+        }
     }
 }

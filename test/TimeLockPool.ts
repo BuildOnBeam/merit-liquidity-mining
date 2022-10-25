@@ -556,6 +556,22 @@ describe("TimeLockPool", function () {
             await expect(timeLockPool.curve(NEW_CURVE.length + 1)).to.be.reverted;
         })
 
+        it("Replacing with a curve that is not monotonic increasing should fail", async() => {
+            const NEW_RAW_CURVE = [
+                0,
+                1,
+                2,
+                100,
+                4,
+                5
+            ]
+
+            const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
+                return (x*1e18).toString();
+            })
+            await expect(timeLockPool.connect(deployer).setCurve(NEW_CURVE)).to.be.revertedWith("CurveIncreaseError");
+        })
+
         it("Replacing a point with a non gov role account should fail", async() => {
             await expect(timeLockPool.setCurvePoint((4*1e18).toString(), 3)).to.be.revertedWith("NotGovError()");
         });
@@ -579,7 +595,7 @@ describe("TimeLockPool", function () {
 
         it("Adding a point should do it correctly", async() => {
             await expect(timeLockPool.connect(deployer).curve(5)).to.be.reverted;
-            const newPoint = (4*1e18).toString();
+            const newPoint = (6*1e18).toString();
             await timeLockPool.connect(deployer).setCurvePoint(newPoint, 5);
             
             const addedCurvePoint = await timeLockPool.curve(5);
@@ -601,6 +617,12 @@ describe("TimeLockPool", function () {
             const newPoint = (4*1e18).toString();
             // A curve cannot have less than two elements, thus it must fail
             await expect(timeLockPool.connect(deployer).setCurvePoint(newPoint, 9)).to.be.revertedWith("ShortCurveError()");            
+        })
+
+        it("Adding a point so that curve is not monotonic increasing should fail", async() => {
+            await expect(timeLockPool.connect(deployer).curve(5)).to.be.reverted;
+            const newPoint = (4*1e18).toString();
+            await expect(timeLockPool.connect(deployer).setCurvePoint(newPoint, 5)).to.be.revertedWith("CurveIncreaseError");
         })
     });    
 
@@ -1019,7 +1041,7 @@ describe("TimeLockPool", function () {
         it("Gov should be able to set curve in batches", async() => {
             const calldatas: any[] = [];
 
-            const newPoint1 = (4*1e18).toString();
+            const newPoint1 = (2*1e18).toString();
             const newPoint2 = (9*1e18).toString();
             const newPoint3 = (10*1e18).toString();
             calldatas.push(
