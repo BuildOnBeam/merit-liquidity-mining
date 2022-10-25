@@ -66,6 +66,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     error DepositExpiredError();
     error ZeroDurationError();
+    error ZeroAddressError();
     error ZeroAmountError();
     error ShortCurveError();
 
@@ -115,6 +116,9 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _receiver uint256 owner of the lock
      */
     function withdraw(uint256 _depositId, address _receiver) external {
+        if (_receiver == address(0)) {
+            revert ZeroAddressError();
+        }
         if (_depositId >= depositsOf[_msgSender()].length) {
             revert NonExistingDepositError();
         }

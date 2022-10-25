@@ -262,6 +262,10 @@ describe("TimeLockPool", function () {
             await timeLockPool.deposit(DEPOSIT_AMOUNT, constants.MaxUint256, account1.address);
         });
 
+        it("Withdraw to zero address should fail", async() => {
+            await expect(timeLockPool.withdraw(0, constants.AddressZero)).to.be.revertedWith("ZeroAddressError()");
+        });
+
         it("Withdraw before expiry should fail", async() => {
             await expect(timeLockPool.withdraw(0, account1.address)).to.be.revertedWith("TooSoonError()");
         });
