@@ -23,6 +23,8 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
     error NoDepositTokenError();
     error NotGovError();
 
+    uint256[50] __gap; // Storage gap for reserving storage slots in future upgrades and preserve storage layout.
+
     IERC20 public depositToken;
     IERC20 public rewardToken;
     ITimeLockPool public escrowPool;
