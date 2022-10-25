@@ -327,11 +327,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             curve[_position] = _newPoint;
         } else if (_position == curve.length) {
             curve.push(_newPoint);
+            unit = maxLockDuration / (curve.length - 1);
         } else {
             if (curve.length - 1 < 2) {
                 revert ShortCurveError();
             }
             curve.pop();
+            unit = maxLockDuration / (curve.length - 1);
         }
         emit CurveChanged(_msgSender());
     }
