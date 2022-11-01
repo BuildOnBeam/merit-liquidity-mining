@@ -66,6 +66,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     error DepositExpiredError();
     error ZeroDurationError();
+    error ZeroAddressError();
     error ZeroAmountError();
     error ShortCurveError();
 
@@ -77,12 +78,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     /**
      * @notice Creates a lock with an amount of tokens and mint the corresponding shares.
-     * @dev The function forces the duration to be in between the minimum and maximum
-     * duration if it the duration parameter is outside of those bounds. Uses the multiplier
-     * function to get the amount of shares to mint.
+     * @dev The duration is has a lower and an upper bound which are enforced in case its
+     * value is outside those bounds. Uses the multiplier function to get the amount of shares to mint.
      * @param _amount uint256 amount of tokens to be deposited
      * @param _duration uint256 time that the deposit will be locked.
-     * @param _receiver uint256 owner of the lock
+     * @param _receiver address owner of the lock
      */
     function deposit(uint256 _amount, uint256 _duration, address _receiver) external override {
         if (_amount == 0) {
@@ -98,9 +98,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
         duration = duration.max(MIN_LOCK_DURATION);
 
-        depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
-
-        uint256 mintAmount = _amount * getMultiplier(duration) / 1e18;
+        uint256 mintAmount = _amount * getMultiplier(duration) / ONE;
 
         depositsOf[_receiver].push(Deposit({
             amount: _amount,
@@ -110,17 +108,21 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         }));
 
         _mint(_receiver, mintAmount);
+        depositToken.safeTransferFrom(_msgSender(), address(this), _amount);
         emit Deposited(_amount, duration, _receiver, _msgSender());
     }
 
     /**
      * @notice Withdraws all the tokens from the lock
-     * @dev The lock has to be expired to withdraw the tokens. When the withdrawl happens
+     * @dev The lock has to be expired to withdraw the tokens. When the withdrawal happens
      * the shares minted on the deposit are burnt.
-     * @param _depositId uint256 id of the deposit to be increased.
-     * @param _receiver uint256 owner of the lock
+     * @param _depositId uint256 id of the deposit to be withdrawn from.
+     * @param _receiver address receiver of the withdrawn funds
      */
     function withdraw(uint256 _depositId, address _receiver) external {
+        if (_receiver == address(0)) {
+            revert ZeroAddressError();
+        }
         if (_depositId >= depositsOf[_msgSender()].length) {
             revert NonExistingDepositError();
         }
@@ -145,12 +147,12 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @notice Adds more time to current lock.
      * @dev This function extends the duration of a specific lock -deposit- of the sender.
      * While doing so, it uses the timestamp of the current block and calculates the remaining
-     * time to the end of the lock, and adds the increase duration. This results is a new
+     * time to the end of the lock, and adds the increased duration. This results in a new
      * duration that can be different to the original duration from the lock one (>, = or <), 
-     * and gets multiplied by the correspondant multiplier. The final result can be more, same,
+     * and gets multiplied by the corresponding multiplier. The final result can be more, same,
      * or less shares, which will be minted/burned accordingly.
      * @param _depositId uint256 id of the deposit to be increased.
-     * @param _increaseDuration uint256 time to be added to the lock meassured from the end of the lock
+     * @param _increaseDuration uint256 time to be added to the lock measured from the end of the lock
      */
     function extendLock(uint256 _depositId, uint256 _increaseDuration) external {
         // Check if actually increasing
@@ -171,7 +173,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // New duration is the time expiration plus the increase
         uint256 duration = maxLockDuration.min(uint256(userDeposit.end - block.timestamp) + increaseDuration);
 
-        uint256 mintAmount = userDeposit.amount * getMultiplier(duration) / 1e18;
+        uint256 mintAmount = userDeposit.amount * getMultiplier(duration) / ONE;
 
         // Multiplier curve changes with time, need to check if the mint amount is bigger, equal or smaller than the already minted
         
@@ -213,17 +215,16 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert DepositExpiredError();
         }
 
-        depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
-
-        // Multiplier should be acording the remaining time to the deposit to end
+        // Multiplier should be according the remaining time  from the deposit until its end.
         uint256 remainingDuration = uint256(userDeposit.end - block.timestamp);
 
-        uint256 mintAmount = _increaseAmount * getMultiplier(remainingDuration) / 1e18;
+        uint256 mintAmount = _increaseAmount * getMultiplier(remainingDuration) / ONE;
 
         depositsOf[_receiver][_depositId].amount += _increaseAmount;
         depositsOf[_receiver][_depositId].shareAmount += mintAmount;
 
         _mint(_receiver, mintAmount);
+        depositToken.safeTransferFrom(_msgSender(), address(this), _increaseAmount);
         emit LockIncreased(_depositId, _receiver, _msgSender(), _increaseAmount);
     }
 
@@ -243,12 +244,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // n is the time unit where the lockDuration stands
         uint n = _lockDuration / unit;
         // if last point no need to interpolate
-        // trim de curve if it exceedes the maxBonus // TODO check if this is needed
         if (n == curve.length - 1) {
-            return 1e18 + curve[n];
+            return ONE + curve[n];
         }
         // linear interpolation between points
-        return 1e18 + curve[n] + (_lockDuration - n * unit) * (curve[n + 1] - curve[n]) / unit;
+        return ONE + curve[n] + (_lockDuration - n * unit) * (curve[n + 1] - curve[n]) / unit;
     }
 
     function getTotalDeposit(address _account) public view returns(uint256) {
@@ -278,7 +278,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
     /**
      * @notice Can set an entire new curve.
-     * @dev This function can change current curve by a completely new. For doing so, it does not
+     * @dev This function can change current curve by a completely new one. By doing so, it does not
      * matter if the new curve's length is larger, equal, or shorter because the function manages
      * all of those cases.
      * @param _curve uint256 array of the points that compose the curve.
@@ -318,7 +318,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @notice Can set a point of the curve.
      * @dev This function can replace any point in the curve by inputing the existing index,
      * add a point to the curve by using the index that equals the amount of points of the curve,
-     * and remove the last point of the curve if an index greated than the length is used. The first
+     * and remove the last point of the curve if an index greater than the length is used. The first
      * point of the curve index is zero.
      * @param _newPoint uint256 point to be set.
      * @param _position uint256 position of the array to be set (zero-based indexing convention).

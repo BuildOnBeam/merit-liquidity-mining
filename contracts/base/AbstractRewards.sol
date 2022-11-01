@@ -45,31 +45,17 @@ abstract contract AbstractRewards is Initializable, IAbstractRewards {
   }
 
 /* ========  Public View Functions  ======== */
-  /**
-   * @dev Returns the total amount of rewards a given address is able to withdraw.
-   * @param _account Address of a reward recipient
-   * @return A uint256 representing the rewards `account` can withdraw
-   */
+  /// @inheritdoc IAbstractRewards
   function withdrawableRewardsOf(address _account) public view override returns (uint256) {
     return cumulativeRewardsOf(_account) - withdrawnRewards[_account];
   }
 
-  /**
-   * @notice View the amount of rewards that an address has withdrawn.
-   * @param _account The address of a token holder.
-   * @return The amount of rewards that `account` has withdrawn.
-   */
+  /// @inheritdoc IAbstractRewards
   function withdrawnRewardsOf(address _account) public view override returns (uint256) {
     return withdrawnRewards[_account];
   }
 
-  /**
-   * @notice View the amount of rewards that an address has earned in total.
-   * @dev accumulativeFundsOf(account) = withdrawableRewardsOf(account) + withdrawnRewardsOf(account)
-   * = (pointsPerShare * balanceOf(account) + pointsCorrection[account]) / POINTS_MULTIPLIER
-   * @param _account The address of a token holder.
-   * @return The amount of rewards that `account` has earned in total.
-   */
+  /// @inheritdoc IAbstractRewards
   function cumulativeRewardsOf(address _account) public view override returns (uint256) {
     return ((pointsPerShare * getSharesOf(_account)).toInt256() + pointsCorrection[_account]).toUint256() / POINTS_MULTIPLIER;
   }

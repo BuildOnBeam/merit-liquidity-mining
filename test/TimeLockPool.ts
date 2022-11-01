@@ -266,6 +266,10 @@ describe("TimeLockPool", function () {
             await timeLockPool.deposit(DEPOSIT_AMOUNT, constants.MaxUint256, account1.address);
         });
 
+        it("Withdraw to zero address should fail", async() => {
+            await expect(timeLockPool.withdraw(0, constants.AddressZero)).to.be.revertedWith("ZeroAddressError()");
+        });
+
         it("Withdraw before expiry should fail", async() => {
             await expect(timeLockPool.withdraw(0, account1.address)).to.be.revertedWith("TooSoonError()");
         });
@@ -569,7 +573,7 @@ describe("TimeLockPool", function () {
                 4,
                 5
             ]
-           
+
             const NEW_CURVE = NEW_RAW_CURVE.map(function(x) {
                 return (x*1e18).toString();
             })
