@@ -17,13 +17,15 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error TooSoonError();
     error MaxBonusError();
     error ShareBurningError();
+    error SmallFirstDepositError();
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
-    uint256 public constant MIN_LOCK_DURATION = 10 minutes;
+    uint256 public constant MIN_LOCK_DURATION = 1 days;
     
     uint256[] public curve;
     uint256 public unit;
+    bool public firstDeposit = true;
 
     mapping(address => Deposit[]) public depositsOf;
 
@@ -87,6 +89,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_amount == 0) {
             revert ZeroAmountError();
         }
+        // check that first deposit is big enough only for non escrowPools
+        if (address(escrowPool) != address(0) && firstDeposit && _amount < 1e18) {
+            revert SmallFirstDepositError();
+            firstDeposit = false;
+        } 
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
@@ -200,7 +207,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert ZeroAmountError();
         }
 
-        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+        Deposit memory userDeposit = depositsOf[_receiver][_depositId];
 
         // Only can extend if it has not expired
         if (block.timestamp >= userDeposit.end) {
@@ -327,12 +334,28 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             curve[_position] = _newPoint;
         } else if (_position == curve.length) {
             curve.push(_newPoint);
+            unit = maxLockDuration / (curve.length - 1);
         } else {
             if (curve.length - 1 < 2) {
                 revert ShortCurveError();
             }
             curve.pop();
+            unit = maxLockDuration / (curve.length - 1);
         }
         emit CurveChanged(_msgSender());
     }
+
+    function kick(uint256 _depositId, address _user) external {
+        if (_depositId >= depositsOf[_user].length) {
+            revert NonExistingDepositError();
+        }
+        Deposit memory userDeposit = depositsOf[_user][_depositId];
+        if (block.timestamp < userDeposit.end) {
+            revert TooSoonError();
+        }
+
+        // burn pool shares so that resulting are equal to deposit amount
+        _burn(_user, userDeposit.shareAmount - userDeposit.amount);
+        depositsOf[_user][_depositId].shareAmount =  userDeposit.amount;
+    }    
 }

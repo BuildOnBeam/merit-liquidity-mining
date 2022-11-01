@@ -171,6 +171,10 @@ describe("TimeLockPool", function () {
 
         const DEPOSIT_AMOUNT = parseEther("10");
 
+        it("First deposit should not be less than 1e18", async() => {
+            await expect(timeLockPool.deposit(parseEther("0.1"), 0, account3.address)).to.be.revertedWith("SmallFirstDepositError");
+        });
+        
         it("Depositing with no lock should lock it for 10 minutes to prevent flashloans", async() => {
             await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
@@ -1115,6 +1119,35 @@ describe("TimeLockPool", function () {
             expect(viewData[0].deposits[1].shareAmount.toString()).to.be.eq(deposit1.shareAmount.toString())
             expect(viewData[0].deposits[1].start.toString()).to.be.eq(deposit1.start.toString())
             expect(viewData[0].deposits[1].end.toString()).to.be.eq(deposit1.end.toString())
+        });
+    });
+
+    describe("Kick", async() => {
+        const DEPOSIT_AMOUNT = parseEther("176.378");
+        const THREE_MONTHS = MAX_LOCK_DURATION / 12;
+
+        beforeEach(async() => {
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, THREE_MONTHS, account1.address);
+        });
+
+        it("Trying to kick a non existing deposit should revert", async() => {
+            await expect(timeLockPool.kick(1, account1.address)).to.be.revertedWith("NonExistingDepositError()");
+        });
+
+        it("Trying to kick before deposit ends should revert", async() => {
+            await expect(timeLockPool.kick(0, account1.address)).to.be.revertedWith("TooSoonError()");
+        });
+
+        it("Trying to kick after end should succeed", async() => {
+            await timeTraveler.increaseTime(THREE_MONTHS * 2);
+            const balanceBeforeKick = await timeLockPool.balanceOf(account1.address);
+            const depositBeforeKick = await timeLockPool.depositsOf(account1.address, 0);
+            await timeLockPool.kick(0, account1.address);
+            const balanceAfterKick = await timeLockPool.balanceOf(account1.address);
+            const depositAfterKick = await timeLockPool.depositsOf(account1.address, 0);
+
+            expect(balanceBeforeKick).to.be.eq(depositBeforeKick.shareAmount)
+            expect(balanceAfterKick).to.be.eq(depositAfterKick.shareAmount).to.be.eq(depositBeforeKick.amount).to.be.eq(depositAfterKick.amount)
         });
     });
 });
