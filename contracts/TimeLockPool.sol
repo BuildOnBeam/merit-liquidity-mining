@@ -200,7 +200,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert ZeroAmountError();
         }
 
-        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+        Deposit memory userDeposit = depositsOf[_receiver][_depositId];
 
         // Only can extend if it has not expired
         if (block.timestamp >= userDeposit.end) {
