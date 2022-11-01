@@ -284,7 +284,7 @@ describe("TimeLockPool", function () {
                 const nextBlockTimestamp = (startUserDepostit.end.sub(startUserDepostit.start)).div(2).add(startUserDepostit.start).toNumber();
                 // Fastforward to half of the deposit time elapsed
                 await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
-                await timeLockNonTransferablePool.extendLock(0, MAX_LOCK_DURATION / 24)
+                await timeLockNonTransferablePool.extendLock(0, MAX_LOCK_DURATION / 12)
     
                 let slot: string[] = new Array;
                 for(let i = 0; i < 1000; i++) {
@@ -366,7 +366,7 @@ describe("TimeLockPool", function () {
                 const nextBlockTimestamp = (startUserDepostit.end.sub(startUserDepostit.start)).div(2).add(startUserDepostit.start).toNumber();
                 // Fastforward to half of the deposit time elapsed
                 await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
-                await timeLockNonTransferablePool.extendLock(0, MAX_LOCK_DURATION / 24)
+                await timeLockNonTransferablePool.extendLock(0, MAX_LOCK_DURATION / 12)
     
                 // Upgrade
                 const timeLockNonTransferablePoolFactoryV2 = new TimeLockNonTransferablePoolV2__factory(deployer);

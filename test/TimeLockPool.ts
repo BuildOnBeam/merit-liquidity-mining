@@ -846,7 +846,7 @@ describe("TimeLockPool", function () {
             expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
         });
 
-        it("Extending lock with a significant smaller new curve should burn tokens", async() => {
+        it("Extending lock that mints less shares that the user has should revet", async() => {
             // First deposit calculated with multiplier from first curve
             // Then curve changes and multiplier gets smaller, generating a net burn in the tokens
             // Amount * Multiplier1 > Amount * Multiplier2
@@ -862,21 +862,7 @@ describe("TimeLockPool", function () {
 
             await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
 
-            await expect(timeLockPool.extendLock(0, THREE_MONTHS * 2))
-                .to.emit(timeLockPool, "Transfer")
-
-            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
-            const endBalance = await timeLockPool.balanceOf(account1.address);
-
-            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
-            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
-            
-            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
-            const sixMonthsMultiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2));
-            const theoreticalEndShareAmount = DEPOSIT_AMOUNT.mul(sixMonthsMultiplier).div(parseEther("1"));
-
-            expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
-            expect(endBalance).to.be.below(startBalance)
+            await expect(timeLockPool.extendLock(0, THREE_MONTHS * 2)).to.be.revertedWith("ShareBurningError");
         });
     });
 
