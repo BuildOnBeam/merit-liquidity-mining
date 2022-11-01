@@ -17,13 +17,16 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error TooSoonError();
     error MaxBonusError();
     error CurveIncreaseError();
+    error ShareBurningError();
+    error SmallFirstDepositError();
 
     uint256 public maxBonus;
     uint256 public maxLockDuration;
-    uint256 public constant MIN_LOCK_DURATION = 10 minutes;
+    uint256 public constant MIN_LOCK_DURATION = 1 days;
     
     uint256[] public curve;
     uint256 public unit;
+    bool public firstDeposit = true;
 
     mapping(address => Deposit[]) public depositsOf;
 
@@ -48,9 +51,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         __BasePool_init(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration);
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();
-        }
-        if (_curve.length < 2) {
-            revert ShortCurveError();
         }
         checkCurve(_curve);
         for (uint i=0; i < _curve.length; i++) {
@@ -88,6 +88,11 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_amount == 0) {
             revert ZeroAmountError();
         }
+        // check that first deposit is big enough only for non escrowPools
+        if (address(escrowPool) != address(0) && firstDeposit && _amount < 1e18) {
+            revert SmallFirstDepositError();
+            firstDeposit = false;
+        } 
         // Don't allow locking > maxLockDuration
         uint256 duration = _duration.min(maxLockDuration);
         // Enforce min lockup duration to prevent flash loan or MEV transaction ordering
@@ -172,14 +177,13 @@ contract TimeLockPool is BasePool, ITimeLockPool {
 
         // Multiplier curve changes with time, need to check if the mint amount is bigger, equal or smaller than the already minted
         
-        // If the new amount is bigger mint the difference
-        if (mintAmount > userDeposit.shareAmount) {
+        // If the new amount if bigger mint the difference
+        if (mintAmount >= userDeposit.shareAmount) {
             depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
             _mint(_msgSender(), mintAmount - userDeposit.shareAmount);
         // If the new amount is less then burn that difference
-        } else if (mintAmount < userDeposit.shareAmount) {
-            depositsOf[_msgSender()][_depositId].shareAmount =  mintAmount;
-            _burn(_msgSender(), userDeposit.shareAmount - mintAmount);
+        } else {
+            revert ShareBurningError();
         }
 
         depositsOf[_msgSender()][_depositId].start = uint64(block.timestamp);
@@ -204,7 +208,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             revert ZeroAmountError();
         }
 
-        Deposit memory userDeposit = depositsOf[_msgSender()][_depositId];
+        Deposit memory userDeposit = depositsOf[_receiver][_depositId];
 
         // Only can extend if it has not expired
         if (block.timestamp >= userDeposit.end) {
@@ -280,9 +284,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _curve uint256 array of the points that compose the curve.
      */
     function setCurve(uint256[] calldata _curve) external onlyGov {
-        if (_curve.length < 2) {
-            revert ShortCurveError();
-        }
         // same length curves
         if (curve.length == _curve.length) {
             for (uint i=0; i < curve.length; i++) {
@@ -351,5 +352,19 @@ contract TimeLockPool is BasePool, ITimeLockPool {
                 revert CurveIncreaseError();
             }
         }
+    }
+
+    function kick(uint256 _depositId, address _user) external {
+        if (_depositId >= depositsOf[_user].length) {
+            revert NonExistingDepositError();
+        }
+        Deposit memory userDeposit = depositsOf[_user][_depositId];
+        if (block.timestamp < userDeposit.end) {
+            revert TooSoonError();
+        }
+
+        // burn pool shares so that resulting are equal to deposit amount
+        _burn(_user, userDeposit.shareAmount - userDeposit.amount);
+        depositsOf[_user][_depositId].shareAmount =  userDeposit.amount;
     }
 }

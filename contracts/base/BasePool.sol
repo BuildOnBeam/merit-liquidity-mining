@@ -22,6 +22,7 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
     error MoreThanOneError();
     error NoDepositTokenError();
     error NotGovError();
+    error EscrowPoolError();
 
     uint256[50] __gap; // Storage gap for reserving storage slots in future upgrades and preserve storage layout.
 
@@ -69,6 +70,9 @@ abstract contract BasePool is Initializable, AccessControlEnumerable, ERC20Votes
         }
         if (_depositToken == address(0)) {
             revert NoDepositTokenError();
+        }
+        if (_escrowPool == address(0) && _escrowPortion > 0) {
+            revert EscrowPoolError();
         }
         depositToken = IERC20(_depositToken);
         rewardToken = IERC20(_rewardToken);
