@@ -171,6 +171,10 @@ describe("TimeLockPool", function () {
 
         const DEPOSIT_AMOUNT = parseEther("10");
 
+        it("First deposit should not be less than 1e18", async() => {
+            await expect(timeLockPool.deposit(parseEther("0.1"), 0, account3.address)).to.be.revertedWith("SmallFirstDepositError");
+        });
+        
         it("Depositing with no lock should lock it for 10 minutes to prevent flashloans", async() => {
             await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
             const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
@@ -864,7 +868,7 @@ describe("TimeLockPool", function () {
             expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
         });
 
-        it("Extending lock with a significant smaller new curve should burn tokens", async() => {
+        it("Extending lock that mints less shares that the user has should revet", async() => {
             // First deposit calculated with multiplier from first curve
             // Then curve changes and multiplier gets smaller, generating a net burn in the tokens
             // Amount * Multiplier1 > Amount * Multiplier2
@@ -880,21 +884,7 @@ describe("TimeLockPool", function () {
 
             await timeTraveler.setNextBlockTimestamp(nextBlockTimestamp);
 
-            await expect(timeLockPool.extendLock(0, THREE_MONTHS * 2))
-                .to.emit(timeLockPool, "Transfer")
-
-            const endUserDepostit = await timeLockPool.depositsOf(account1.address, 0);
-            const endBalance = await timeLockPool.balanceOf(account1.address);
-
-            expect(startBalance).to.be.eq(startUserDepostit.shareAmount)
-            expect(endBalance).to.be.eq(endUserDepostit.shareAmount)
-            
-            const latestBlockTimestamp = (await hre.ethers.provider.getBlock("latest")).timestamp;
-            const sixMonthsMultiplier = await timeLockPool.getMultiplier(startUserDepostit.end.sub(latestBlockTimestamp).add(THREE_MONTHS * 2));
-            const theoreticalEndShareAmount = DEPOSIT_AMOUNT.mul(sixMonthsMultiplier).div(parseEther("1"));
-
-            expect(theoreticalEndShareAmount).to.be.eq(endUserDepostit.shareAmount).to.be.eq(endBalance);
-            expect(endBalance).to.be.below(startBalance)
+            await expect(timeLockPool.extendLock(0, THREE_MONTHS * 2)).to.be.revertedWith("ShareBurningError");
         });
     });
 
@@ -1151,6 +1141,35 @@ describe("TimeLockPool", function () {
             expect(viewData[0].deposits[1].shareAmount.toString()).to.be.eq(deposit1.shareAmount.toString())
             expect(viewData[0].deposits[1].start.toString()).to.be.eq(deposit1.start.toString())
             expect(viewData[0].deposits[1].end.toString()).to.be.eq(deposit1.end.toString())
+        });
+    });
+
+    describe("Kick", async() => {
+        const DEPOSIT_AMOUNT = parseEther("176.378");
+        const THREE_MONTHS = MAX_LOCK_DURATION / 12;
+
+        beforeEach(async() => {
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, THREE_MONTHS, account1.address);
+        });
+
+        it("Trying to kick a non existing deposit should revert", async() => {
+            await expect(timeLockPool.kick(1, account1.address)).to.be.revertedWith("NonExistingDepositError()");
+        });
+
+        it("Trying to kick before deposit ends should revert", async() => {
+            await expect(timeLockPool.kick(0, account1.address)).to.be.revertedWith("TooSoonError()");
+        });
+
+        it("Trying to kick after end should succeed", async() => {
+            await timeTraveler.increaseTime(THREE_MONTHS * 2);
+            const balanceBeforeKick = await timeLockPool.balanceOf(account1.address);
+            const depositBeforeKick = await timeLockPool.depositsOf(account1.address, 0);
+            await timeLockPool.kick(0, account1.address);
+            const balanceAfterKick = await timeLockPool.balanceOf(account1.address);
+            const depositAfterKick = await timeLockPool.depositsOf(account1.address, 0);
+
+            expect(balanceBeforeKick).to.be.eq(depositBeforeKick.shareAmount)
+            expect(balanceAfterKick).to.be.eq(depositAfterKick.shareAmount).to.be.eq(depositBeforeKick.amount).to.be.eq(depositAfterKick.amount)
         });
     });
 });
