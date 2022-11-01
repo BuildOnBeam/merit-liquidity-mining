@@ -16,6 +16,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
     error NonExistingDepositError();
     error TooSoonError();
     error MaxBonusError();
+    error CurveIncreaseError();
     error ShareBurningError();
     error SmallFirstDepositError();
 
@@ -51,9 +52,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         if (_maxLockDuration < MIN_LOCK_DURATION) {
             revert SmallMaxLockDuration();
         }
-        if (_curve.length < 2) {
-            revert ShortCurveError();
-        }
+        checkCurve(_curve);
         for (uint i=0; i < _curve.length; i++) {
             if (_curve[i] > _maxBonus) {
                 revert MaxBonusError();
@@ -285,9 +284,6 @@ contract TimeLockPool is BasePool, ITimeLockPool {
      * @param _curve uint256 array of the points that compose the curve.
      */
     function setCurve(uint256[] calldata _curve) external onlyGov {
-        if (_curve.length < 2) {
-            revert ShortCurveError();
-        }
         // same length curves
         if (curve.length == _curve.length) {
             for (uint i=0; i < curve.length; i++) {
@@ -314,6 +310,7 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             }
             unit = maxLockDuration / (curve.length - 1);
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
     }
 
@@ -342,7 +339,19 @@ contract TimeLockPool is BasePool, ITimeLockPool {
             curve.pop();
             unit = maxLockDuration / (curve.length - 1);
         }
+        checkCurve(curve);
         emit CurveChanged(_msgSender());
+    }
+
+    function checkCurve(uint256[] memory _curve) internal {
+        if (_curve.length < 2) {
+            revert ShortCurveError();
+        }
+        for (uint256 i; i < _curve.length - 1; ++i) {
+            if (_curve[i + 1] < _curve[i]) {
+                revert CurveIncreaseError();
+            }
+        }
     }
 
     function kick(uint256 _depositId, address _user) external {
@@ -357,5 +366,5 @@ contract TimeLockPool is BasePool, ITimeLockPool {
         // burn pool shares so that resulting are equal to deposit amount
         _burn(_user, userDeposit.shareAmount - userDeposit.amount);
         depositsOf[_user][_depositId].shareAmount =  userDeposit.amount;
-    }    
+    }
 }
