@@ -4,9 +4,11 @@ import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants, Contract } from "ethers";
 import hre, { ethers } from "hardhat";
+
 import {
     View__factory,
     TestToken__factory,
+    TestPermitToken__factory,
     TimeLockPool__factory,
     TestTimeLockPool__factory,
     ProxyAdmin__factory,
@@ -16,6 +18,7 @@ import {
 import { 
     View,
     TestToken,
+    TestPermitToken,
     TimeLockPool,
     TestTimeLockPool,
     ProxyAdmin,
@@ -23,6 +26,7 @@ import {
     TimeLockNonTransferablePoolV2
 } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
+import { getPermitSignature } from "../utils/Permit";
 import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeLockPool.json";
 import * as TimeLockNonTransferablePoolV2JSON from "../artifacts/contracts/test/TimeLockNonTransferablePoolV2.sol/TimeLockNonTransferablePoolV2.json";
 
@@ -89,8 +93,8 @@ describe("TimeLockPool", function () {
     let account4: SignerWithAddress;
     let signers: SignerWithAddress[];
 
-    let depositToken: TestToken;
-    let rewardToken: TestToken;
+    let depositToken: TestPermitToken;
+    let rewardToken: TestPermitToken;
     let timeLockPool: Contract;
     let testTimeLockPoolImplementation: TimeLockPool;
     let escrowPool: TestTimeLockPool;
@@ -109,7 +113,7 @@ describe("TimeLockPool", function () {
             ...signers
         ] = await hre.ethers.getSigners();
 
-        const testTokenFactory = await new TestToken__factory(deployer);
+        const testTokenFactory = await new TestPermitToken__factory(deployer);
 
         depositToken = await testTokenFactory.deploy("DPST", "Deposit Token");
         rewardToken = await testTokenFactory.deploy("RWRD", "Reward Token");
@@ -1174,6 +1178,59 @@ describe("TimeLockPool", function () {
 
             expect(balanceBeforeKick).to.be.eq(depositBeforeKick.shareAmount)
             expect(balanceAfterKick).to.be.eq(depositAfterKick.shareAmount).to.be.eq(depositBeforeKick.amount).to.be.eq(depositAfterKick.amount)
+        });
+    });
+
+    describe("Permit", async() => {
+        const DEPOSIT_AMOUNT = parseEther("176.378");
+
+        it("Depositing with permit should be possible", async() => {
+            timeLockPool = timeLockPool.connect(account4);
+
+            // Assigning an initial balance
+            await depositToken.mint(account4.address, INITIAL_MINT);
+
+            // Not having allowance
+            expect(await depositToken.allowance(account4.address, timeLockPool.address)).to.be.eq(0);
+
+            // Expect to fail because of not having allowance
+            await expect(timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account4.address)).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+
+            const { v, r, s } = await getPermitSignature(
+                account4,
+                depositToken,
+                timeLockPool.address,
+                DEPOSIT_AMOUNT,
+                constants.MaxUint256
+            );
+
+            const calldatas: any[] = [];
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.permitToken(
+                    depositToken.address,
+                    account4.address,
+                    timeLockPool.address,
+                    DEPOSIT_AMOUNT,
+                    constants.MaxUint256,
+                    v,
+                    r,
+                    s
+                )).data
+            );
+
+            calldatas.push(
+                (await timeLockPool.populateTransaction.deposit(DEPOSIT_AMOUNT, 0, account4.address)).data
+            );
+            
+            await timeLockPool.batch(calldatas, true);
+            
+            const allowance = await depositToken.allowance(account4.address, timeLockPool.address);
+
+            const deposit = await timeLockPool.depositsOf(account4.address, 0);
+        
+            expect(allowance).to.be.eq(0);
+            expect(deposit.amount).to.be.eq(DEPOSIT_AMOUNT);
         });
     });
 });
