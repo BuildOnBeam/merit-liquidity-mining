@@ -27,12 +27,12 @@ import * as TimeLockPoolJSON from "../artifacts/contracts/TimeLockPool.sol/TimeL
 import * as TimeLockNonTransferablePoolV2JSON from "../artifacts/contracts/test/TimeLockNonTransferablePoolV2.sol/TimeLockNonTransferablePoolV2.json";
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
-const ESCROW_PORTION = parseEther("1");
+const ESCROW_PORTION = parseEther("0.77");
 const MAX_BONUS = parseEther("10"); // Same as max value in the curve
 const MAX_BONUS_ESCROW = parseEther("1");
 const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 4;
 const INITIAL_MINT = parseEther("1000000");
-const FLAT_CURVE = [(0e18).toString(), (0e18).toString()];
+const FLAT_CURVE = [(1e18).toString(), (1e18).toString()];
 const ESCROW_POOL = "0xfeea44bc2161f2fe11d55e557ae4ec855e2d1168";
 const CURVE = [
     (0*1e18).toString(),

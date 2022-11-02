@@ -32,7 +32,7 @@ const CURVE = [
     parseEther("5")
 ]
 
-// MAINNET
+// MAINNET ////////////////////////////////////////////////////////////////////////
 // 0x7e9e4c0876B2102F33A1d82117Cc73B7FddD0032 | Merit Circle Multisig
 // 0x949D48EcA67b17269629c7194F4b727d4Ef9E5d6 | Merit Circle (MC)
 // 0xcCb63225a7B19dcF66717e4d40C9A72B39331d61 | MC/ETH Uni V2 LP (MCETHLP)
@@ -40,18 +40,37 @@ const CURVE = [
 
 // 0x5c76aD4764A4607cD57644faA937A8cA16729e39 | Staked MC pool (sMC)
 // 0x44c01e5e4216f3162538914d9c7f5E6A0d87820e | Staked MC LP (sMCETHLP)
+///////////////////////////////////////////////////////////////////////////////////
 
 
+// LOCALHOST //////////////////////////////////////////////////////////////////////
+// 0x7e9e4c0876B2102F33A1d82117Cc73B7FddD0032 | Merit Circle Multisig
+// 0x949D48EcA67b17269629c7194F4b727d4Ef9E5d6 | Merit Circle (MC)
+// 0xcCb63225a7B19dcF66717e4d40C9A72B39331d61 | MC/ETH Uni V2 LP (MCETHLP)
+// 0xfEEA44bc2161F2Fe11D55E557ae4Ec855e2D1168 | Escrowed Merit Circle (eMC)
+///////////////////////////////////////////////////////////////////////////////////
 
-// Goerli deployment
-//const MC_TOKEN: string = "0xc8dB38cC85C721a16621d54F8c7f473c4CB221bE";
-//const MCETHLP_TOKEN: string = "0x9524fAef30e1963e00F218b43033ebe0E75d42ca";
-//ESCROW_POOL: string = "0xE0f7269d7B7Ae96D372450dcB6C7Ad2b10ab98fA";
 
-const MC_TOKEN: string = "0x949D48EcA67b17269629c7194F4b727d4Ef9E5d6";
-const MCETHLP_TOKEN: string = "0xcCb63225a7B19dcF66717e4d40C9A72B39331d61";
-const ESCROW_POOL: string = "0xfEEA44bc2161F2Fe11D55E557ae4Ec855e2D1168";
-const MULTISIG: string = "0x7e9e4c0876B2102F33A1d82117Cc73B7FddD0032";
+let MC_TOKEN: string;
+let MCETHLP_TOKEN: string;
+let ESCROW_POOL: string;
+let MULTISIG: string;
+
+/*
+// MAINNET ////////////////////////////////////////////////////////////////////////
+MC_TOKEN = "0x949D48EcA67b17269629c7194F4b727d4Ef9E5d6";
+MCETHLP_TOKEN = "0xcCb63225a7B19dcF66717e4d40C9A72B39331d61";
+ESCROW_POOL = "0xfEEA44bc2161F2Fe11D55E557ae4Ec855e2D1168";
+MULTISIG = "0x7e9e4c0876B2102F33A1d82117Cc73B7FddD0032";
+///////////////////////////////////////////////////////////////////////////////////
+*/
+
+// LOCALHOST //////////////////////////////////////////////////////////////////////
+MC_TOKEN = "0xF5aA8e3C6BA1EdF766E197a0bCD5844Fd1ed8A27";
+MCETHLP_TOKEN = "0xee85d401835561De62b874147Eca8A4Fe1D5cBFf";
+ESCROW_POOL = "0xd9F9304329451Dd31908BC61C0F87e2AA90aacD6";
+MULTISIG = "0x7e9e4c0876B2102F33A1d82117Cc73B7FddD0032";
+///////////////////////////////////////////////////////////////////////////////////
 
 async function deployUpgradeable() {
     const signers = await ethers.getSigners();
@@ -93,8 +112,6 @@ async function deployUpgradeable() {
 
     const MCPoolImplementationInterface = new hre.ethers.utils.Interface(JSON.stringify(TimeLockNonTransferablePoolJSON.abi))
     const MCPool_encoded_data = MCPoolImplementationInterface.encodeFunctionData("initialize", MCPoolInitializeParams);
-    console.log(MCPool_encoded_data);
-    console.log(mcPoolImplementation.functions)
 
     // Deploy the proxy and initialize with specific pool parameters
     console.log("  Deploying MC Pool Proxy");
@@ -102,10 +119,10 @@ async function deployUpgradeable() {
     mcPoolProxyDeploy = await MCPoolProxyDeploy.deploy(
         mcPoolImplementation.address,
         mcPoolProxyAdmin.address,
-        MCPool_encoded_data, {gasLimit: 30000000}
+        MCPool_encoded_data
     );
     console.log(`  MC Pool Proxy deployed to ${mcPoolProxyDeploy.address}`,'\n\n');
-    mcPoolProxy = new ethers.Contract(mcPoolProxyDeploy.address, mcPoolImplementation.interface, signers[0]);
+    mcPoolProxy = new ethers.Contract(mcPoolProxyDeploy.address, MCPoolImplementationInterface, signers[0]);
 
 
 
@@ -148,7 +165,6 @@ async function deployUpgradeable() {
 
     const MCETHLPPoolImplementationInterface = new hre.ethers.utils.Interface(JSON.stringify(TimeLockNonTransferablePoolJSON.abi))
     const MCETHLPPool_encoded_data = MCETHLPPoolImplementationInterface.encodeFunctionData("initialize", MCETHLPPoolInitializeParams);
-    console.log(MCETHLPPool_encoded_data);
 
     // Deploy the proxy and initialize with specific pool parameters
     console.log("  Deploying MCETHLP Pool Proxy");
@@ -159,7 +175,7 @@ async function deployUpgradeable() {
         MCETHLPPool_encoded_data
     );
     console.log(`  MCETHLP Pool Proxy deployed to ${mcethlpPoolProxyDeploy.address}`,'\n\n');
-    mcethlpPoolProxy = new ethers.Contract(mcethlpPoolProxyDeploy.address, mcethlpPoolImplementation.interface, signers[0]);
+    mcethlpPoolProxy = new ethers.Contract(mcethlpPoolProxyDeploy.address, MCETHLPPoolImplementationInterface, signers[0]);
 
 
 
@@ -171,18 +187,22 @@ async function deployUpgradeable() {
     const DEFAULT_ADMIN_ROLE = await mcPoolProxy.DEFAULT_ADMIN_ROLE();
     
     console.log(`  MULTISIG (${MULTISIG}) recieved GOV_ROLE of mcPoolProxy (${mcPoolProxy.address})`);
-    (await (await mcPoolProxy.grantRole(GOV_ROLE, MULTISIG)).wait(3));
+    await mcPoolProxy.grantRole(GOV_ROLE, MULTISIG);
     
     console.log(`  MULTISIG (${MULTISIG}) recieved DEFAULT_ADMIN_ROLE of mcPoolProxy (${mcPoolProxy.address})`);
-    (await (await mcPoolProxy.grantRole(DEFAULT_ADMIN_ROLE, MULTISIG)).wait(3));
+    await mcPoolProxy.grantRole(DEFAULT_ADMIN_ROLE, MULTISIG);
     
     console.log(`  MULTISIG (${MULTISIG}) recieved GOV_ROLE of mcethlpPoolProxy (${mcethlpPoolProxy.address})`);
-    (await (await mcethlpPoolProxy.grantRole(GOV_ROLE, MULTISIG)).wait(3));
+    await mcethlpPoolProxy.grantRole(GOV_ROLE, MULTISIG);
     
     console.log(`  MULTISIG (${MULTISIG}) recieved DEFAULT_ADMIN_ROLE of mcethlpPoolProxy (${mcethlpPoolProxy.address})`,'\n\n');
-    (await (await mcethlpPoolProxy.grantRole(DEFAULT_ADMIN_ROLE, MULTISIG)).wait(3));
+    await mcethlpPoolProxy.grantRole(DEFAULT_ADMIN_ROLE, MULTISIG);
 
-    console.log("CHECK IF EVERYTHING IS CORRECTLY SETUP AND THEN WITH THE DEPLOYER:");
+    console.log("CHECK IF EVERYTHING IS CORRECTLY SETUP:");
+    console.log("  -MULTISIG has GOV_ROLE in both pools");
+    console.log("  -MULTISIG has DEFAULT_ADMIN_ROLE in both pools",'\n');
+
+    console.log("THEN WITH THE DEPLOYER:");
     console.log("  -deposit for 4 years more than $100 MC in MC Pool");
     console.log("  -deposit for 4 years more than $100 LP in LP Pool");
     console.log("  -transfer ownership to MULTISIG in mcPoolProxyAdmin and mcethlpPoolProxyAdmin");
