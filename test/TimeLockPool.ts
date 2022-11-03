@@ -170,10 +170,6 @@ describe("TimeLockPool", function () {
     describe("deposit", async() => {
 
         const DEPOSIT_AMOUNT = parseEther("10");
-
-        it("First deposit should not be less than 1e18", async() => {
-            await expect(timeLockPool.deposit(parseEther("0.1"), 0, account3.address)).to.be.revertedWith("SmallFirstDepositError");
-        });
         
         it("Depositing with no lock should lock it for 10 minutes to prevent flashloans", async() => {
             await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
