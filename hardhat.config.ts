@@ -101,7 +101,10 @@ const config: HardhatUserConfig = {
     target: "ethers-v5",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_KEY
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_KEY,
+      goerli: process.env.ETHERSCAN_KEY
+    }
   }
 };
 
